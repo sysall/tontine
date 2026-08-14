@@ -28,7 +28,7 @@ export const TontineLogo: React.FC<TontineLogoProps> = ({ size = 'md', showText 
             TONTINE <Text className="text-amber-500">EXPRESS</Text>
           </Text>
           <Text className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">
-            Épargne & Tontines en ligne 🇸🇳
+            Épargne & Tontines en ligne
           </Text>
         </View>
       )}

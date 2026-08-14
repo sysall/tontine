@@ -118,7 +118,7 @@ export default function LoginScreen() {
             : 'Authentification réussie. Votre compte est prêt.';
           
           Alert.alert(title, msg, [
-            { text: 'Accéder à mes tontines', onPress: () => router.replace('/onboarding') },
+            { text: 'Accéder à mon tableau de bord', onPress: () => router.replace('/dashboard') },
           ]);
         },
         onError: (err) => {

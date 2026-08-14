@@ -2,15 +2,18 @@ import React, { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useOnboardingStore } from '../store/useOnboardingStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function IndexScreen() {
   const router = useRouter();
   const isCompleted = useOnboardingStore((state) => state.isCompleted);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
-    // Redirect to onboarding or login based on store state
     const timer = setTimeout(() => {
-      if (isCompleted) {
+      if (isAuthenticated) {
+        router.replace('/dashboard');
+      } else if (isCompleted) {
         router.replace('/login');
       } else {
         router.replace('/onboarding');
@@ -18,7 +21,7 @@ export default function IndexScreen() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [isCompleted, router]);
+  }, [isCompleted, isAuthenticated, router]);
 
   return (
     <View className="flex-1 items-center justify-center bg-brand-beige">

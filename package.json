@@ -27,5 +27,8 @@
     "nestjs"
   ],
   "author": "Tontine Express Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@expo/config-plugins": "~8.0.0"
+  }
 }

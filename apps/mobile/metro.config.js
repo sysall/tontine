@@ -16,4 +16,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
+// 3. Condition names for package exports - prioritize CJS/module over ESM import.meta
+config.resolver.unstable_conditionNames = ['react-native', 'browser', 'require', 'module', 'default'];
+config.resolver.conditionNames = ['react-native', 'browser', 'require', 'module', 'default'];
+
 module.exports = withNativeWind(config, { input: './global.css' });

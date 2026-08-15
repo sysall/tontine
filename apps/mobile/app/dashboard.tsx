@@ -30,7 +30,7 @@ import {
   SmartphoneIcon,
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
-import { OFFICIAL_OFFERS, OfficialOffer, OfficialTier, TransactionItem } from '../api/tontineApi';
+import { OFFICIAL_OFFERS, OfficialOffer, OfficialTier, TransactionItem, ActiveTontineItem } from '../api/tontineApi';
 import {
   useDashboardSummary,
   useTransactionHistory,
@@ -192,7 +192,7 @@ export default function DashboardScreen() {
   const tontines = dashboardData?.tontines || [];
   const rawTransactions = txData?.transactions || [];
 
-  const filteredTransactions = rawTransactions.filter((tx) => {
+  const filteredTransactions = rawTransactions.filter((tx: TransactionItem) => {
     if (txFilter === 'contribution') return tx.type === 'contribution';
     if (txFilter === 'payout') return tx.type === 'payout';
     return true;
@@ -271,7 +271,7 @@ export default function DashboardScreen() {
             {isLoading ? (
               <ActivityIndicator size="small" color="#FFC700" className="my-6" />
             ) : (
-              tontines.map((tontine) => (
+              tontines.map((tontine: ActiveTontineItem) => (
                 <View
                   key={tontine.id}
                   className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100"
@@ -402,7 +402,7 @@ export default function DashboardScreen() {
                 <Text className="text-sm font-semibold text-gray-500">Aucune transaction trouvée.</Text>
               </View>
             ) : (
-              filteredTransactions.map((tx) => {
+              filteredTransactions.map((tx: TransactionItem) => {
                 const isPayout = tx.type === 'payout';
                 return (
                   <TouchableOpacity

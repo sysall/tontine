@@ -1,0 +1,9 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "tontine-mobile": "1.0.0",
+    "tontine-api": "1.0.0"
+  },
+  "changesets": []
+}

@@ -27,27 +27,31 @@ export class TontineController {
         {
           id: 'rotative',
           type: 'rotative',
-          title: 'Tontine Rotative Classique 🔄',
-          badge: 'Épargne Rotative',
-          description: 'Recevez le pot complet à votre tour de passage garanti. Cotisations quotidiennes, hebdomadaires ou mensuelles.',
+          title: 'Natt Classique',
+          badge: 'Offre Rotative Mensuelle',
+          description: 'Avec 4 membres par groupe et une prise mensuelle sur 4 mois, cette formule vous permet d\’épargner en toute sérénité.',
           tiers: [
-            { id: 'rotative-10k', name: 'Pack Bronze', amountFcfa: 10000, frequency: 'Mensuel', maxMembers: 10 },
-            { id: 'rotative-25k', name: 'Pack Argent', amountFcfa: 25000, frequency: 'Mensuel', maxMembers: 10 },
-            { id: 'rotative-50k', name: 'Pack Or', amountFcfa: 50000, frequency: 'Mensuel', maxMembers: 10 },
-            { id: 'rotative-100k', name: 'Pack Platine', amountFcfa: 100000, frequency: 'Mensuel', maxMembers: 10 },
+            { id: 'natt-250k', name: 'Option 1', amountFcfa: 250000, frequency: 'Mensuel', maxMembers: 4 },
+            { id: 'natt-500k', name: 'Option 2', amountFcfa: 500000, frequency: 'Mensuel', maxMembers: 4 },
+            { id: 'natt-1M', name: 'Option 3', amountFcfa: 1000000, frequency: 'Mensuel', maxMembers: 4 },
+            { id: 'natt-105M', name: 'Option 4', amountFcfa: 1500000, frequency: 'Mensuel', maxMembers: 4 },
+            { id: 'natt-2M', name: 'Option 5', amountFcfa: 2000000, frequency: 'Mensuel', maxMembers: 4 },
+            { id: 'natt-3M', name: 'Option 6', amountFcfa: 3000000, frequency: 'Mensuel', maxMembers: 4 },
           ],
         },
         {
           id: 'projet',
           type: 'projet',
-          title: 'Tontine Projet & Objectifs 🎯',
-          badge: 'Épargne Dédiée',
-          description: 'Épargnez en groupe pour concrétiser vos projets de vie (Tabaski, Magal, Équipement, Événements) à date fixe.',
+          title: 'Tekk Tegui',
+          badge: 'Offre Rotative Journalière ',
+          description: 'Epargnez rapidement avec 10 autres personnes et finisser apres 2 mois 15 jours.',
           tiers: [
-            { id: 'projet-tabaski', name: 'Coffre Tabaski 🐑', amountFcfa: 25000, frequency: 'Mensuel', targetDate: 'Mai 2027' },
-            { id: 'projet-magal', name: 'Coffre Magal 🕌', amountFcfa: 20000, frequency: 'Mensuel', targetDate: 'Août 2027' },
-            { id: 'projet-immo', name: 'Équipement & Habitat 🏠', amountFcfa: 50000, frequency: 'Mensuel', targetDate: 'Décembre 2026' },
-            { id: 'projet-voyage', name: 'Projet Voyage / Omra ✈️', amountFcfa: 100000, frequency: 'Mensuel', targetDate: 'Janvier 2027' },
+            { id: 'tek-100k', name: 'Option 1', amountFcfa: 100000, frequency: 'Journalier', maxMembers: 10 },
+            { id: 'tek-150k', name: 'Option 2', amountFcfa: 150000, frequency: 'Journalier', maxMembers: 10 },
+            { id: 'tek-250K', name: 'Option 3', amountFcfa: 250000, frequency: 'Journalier', maxMembers: 10 },
+            { id: 'tek-500K', name: 'Option 4', amountFcfa: 500000, frequency: 'Journalier', maxMembers: 10 },
+            { id: 'tek-750K', name: 'Option 5', amountFcfa: 750000, frequency: 'Journalier', maxMembers: 10 },
+            { id: 'tek-1M', name: 'Option 6', amountFcfa: 1000000, frequency: 'Journalier', maxMembers: 10 },
           ],
         },
       ],
@@ -70,7 +74,7 @@ export class TontineController {
       tontines: [
         {
           id: 'tontine-1',
-          name: 'Tontine Rotative - Pack Or 🔄',
+          name: 'Natt Classique',
           offerType: 'rotative',
           category: 'Rotative Mensuelle',
           amountPerCycle: 50000,
@@ -84,9 +88,9 @@ export class TontineController {
         },
         {
           id: 'tontine-2',
-          name: 'Coffres Épargne Tabaski 🐑',
+          name: 'Tekk Tegui',
           offerType: 'projet',
-          category: 'Tontine Projet & Objectifs',
+          category: 'Rotative Journalière ',
           amountPerCycle: 25000,
           currentTurn: 4,
           totalTours: 8,
@@ -109,8 +113,8 @@ export class TontineController {
         {
           id: 'tx-001',
           type: 'payout',
-          title: 'Versement du Pot Gagné 🎉',
-          tontineName: 'Tontine Rotative - Pack Or 🔄',
+          title: 'Versement du Natt',
+          tontineName: 'Natt Classique',
           amountFcfa: 500000,
           provider: 'wave',
           providerName: 'Wave Senegal',
@@ -122,7 +126,7 @@ export class TontineController {
           id: 'tx-002',
           type: 'contribution',
           title: 'Cotisation Tour #3',
-          tontineName: 'Tontine Rotative - Pack Or 🔄',
+          tontineName: 'Tekk Tegui',
           amountFcfa: 50000,
           provider: 'wave',
           providerName: 'Wave Senegal',
@@ -134,7 +138,7 @@ export class TontineController {
           id: 'tx-003',
           type: 'contribution',
           title: 'Cotisation Tour #4',
-          tontineName: 'Coffres Épargne Tabaski 🐑',
+          tontineName: 'Tekk Tegui',
           amountFcfa: 25000,
           provider: 'orange_money',
           providerName: 'Orange Money',
@@ -146,7 +150,7 @@ export class TontineController {
           id: 'tx-004',
           type: 'contribution',
           title: 'Cotisation Tour #2',
-          tontineName: 'Tontine Rotative - Pack Or 🔄',
+          tontineName: 'Natt Classique',
           amountFcfa: 50000,
           provider: 'wave',
           providerName: 'Wave Senegal',
@@ -165,7 +169,7 @@ export class TontineController {
     this.logger.log(`Subscribing to offer ${dto.offerType} (Tier: ${dto.tierId})`);
     const inviteCode = 'TE' + Math.floor(1000 + Math.random() * 9000);
     const title = dto.offerType === 'rotative' ? 'Tontine Rotative Classique 🔄' : 'Tontine Projet & Objectifs 🎯';
-    
+
     return {
       success: true,
       message: `Souscription réussie à la ${title} !`,
@@ -198,4 +202,4 @@ export class TontineController {
 @Module({
   controllers: [TontineController],
 })
-export class TontineModule {}
+export class TontineModule { }

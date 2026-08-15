@@ -337,7 +337,7 @@ export default function LoginScreen() {
                 <Text className="underline font-bold text-gray-600">Conditions d'utilisation</Text>{' '}
                 et la{' '}
                 <Text className="underline font-bold text-gray-600">Politique de confidentialité</Text>{' '}
-                de Tontine Express 🇸🇳
+                de Tontine Express
               </Text>
             </View>
           </View>

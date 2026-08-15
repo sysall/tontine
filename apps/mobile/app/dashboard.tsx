@@ -64,8 +64,8 @@ export default function DashboardScreen() {
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  // Payment Method Form State
-  const [selectedProvider, setSelectedProvider] = useState<'wave' | 'orange_money'>(
+  // Payment Method Modal Form State ('wave' | 'orange_money' | 'card')
+  const [selectedProviderTab, setSelectedProviderTab] = useState<'wave' | 'orange_money' | 'card'>(
     user?.defaultPaymentProvider || 'wave'
   );
   const [paymentPhoneInput, setPaymentPhoneInput] = useState(
@@ -110,7 +110,7 @@ export default function DashboardScreen() {
           setSelectedOfferModal(null);
           setSelectedTier(null);
           Alert.alert(
-            'Félicitations ! 🎉',
+            'Félicitations !',
             `Votre souscription à la ${offerTitle} (${selectedTier.name}) est enregistrée.\n\nCode d'invitation généré pour vos proches : ${res.subscription.inviteCode}`
           );
         },
@@ -133,7 +133,7 @@ export default function DashboardScreen() {
         onSuccess: (res) => {
           setIsJoinModalOpen(false);
           setInviteCodeInput('');
-          Alert.alert('Cercle Rejoint ! 🤝', res.message);
+          Alert.alert('Cercle Rejoint !', res.message);
         },
         onError: (err) => {
           Alert.alert('Erreur', err.message || 'Code d\'invitation introuvable');
@@ -149,25 +149,30 @@ export default function DashboardScreen() {
     }
     setIsKycVerified(true);
     setIsKycModalOpen(false);
-    Alert.alert('Vérification KYC 🛡️', 'Votre pièce d\'identité a été validée avec succès par les services de conformité.');
+    Alert.alert('Vérification KYC', 'Votre pièce d\'identité a été validée avec succès par les services de conformité.');
   };
 
   const handleSavePaymentMethod = () => {
+    if (selectedProviderTab === 'card') {
+      handleContactAdminWhatsApp();
+      return;
+    }
+
     if (!paymentPhoneInput || paymentPhoneInput.trim().length < 9) {
       Alert.alert('Erreur', 'Veuillez saisir un numéro de téléphone valide.');
       return;
     }
 
-    updatePaymentMethod(selectedProvider, paymentPhoneInput);
+    updatePaymentMethod(selectedProviderTab, paymentPhoneInput);
     setIsPaymentModalOpen(false);
-    const providerName = selectedProvider === 'wave' ? 'Wave Sénégal 🌊' : 'Orange Money 🍊';
+    const providerName = selectedProviderTab === 'wave' ? 'Wave Sénégal' : 'Orange Money';
     Alert.alert('Moyen de Paiement Enregistré !', `${providerName} configuré avec le numéro ${paymentPhoneInput}.`);
   };
 
   const handleContactAdminWhatsApp = () => {
     const adminPhone = '221771234567';
     const msg = encodeURIComponent(
-      'Bonjour Admin Tontine Express 🇸🇳, je souhaite effectuer un retrait par carte bancaire / virement sur mon compte.'
+      'Bonjour Admin Tontine Express, je souhaite effectuer un retrait par carte bancaire / virement sur mon compte.'
     );
     const url = `https://wa.me/${adminPhone}?text=${msg}`;
     Linking.openURL(url).catch(() => {
@@ -322,17 +327,16 @@ export default function DashboardScreen() {
                           'Cotisation instantanée',
                           `Procéder au versement de ${tontine.amountPerCycle.toLocaleString('fr-FR')} FCFA pour ${tontine.name} via :`,
                           [
-                            { text: '🌊 Wave', onPress: () => Alert.alert('Wave Sénégal', 'Paiement Wave prêt !') },
-                            { text: '🍊 Orange Money', onPress: () => Alert.alert('Orange Money', 'Paiement OM prêt !') },
+                            { text: 'Wave', onPress: () => Alert.alert('Wave Sénégal', 'Paiement Wave prêt !') },
+                            { text: 'Orange Money', onPress: () => Alert.alert('Orange Money', 'Paiement OM prêt !') },
                             { text: 'Annuler', style: 'cancel' },
                           ]
                         );
                       }}
                       activeOpacity={0.8}
-                      className="px-4 py-2 bg-brand-yellow rounded-xl shadow-sm border border-amber-300 flex-row items-center space-x-1"
+                      className="px-4 py-2 bg-brand-yellow rounded-xl shadow-sm border border-amber-300"
                     >
                       <Text className="text-xs font-black text-brand-dark">COTISER</Text>
-                      <Text className="text-xs">🌊</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -355,10 +359,11 @@ export default function DashboardScreen() {
             <View className="flex-row space-x-2 mb-4">
               <TouchableOpacity
                 onPress={() => setTxFilter('all')}
-                className={`px-3 py-1.5 rounded-full border ${txFilter === 'all'
-                  ? 'bg-brand-dark border-brand-dark'
-                  : 'bg-white border-gray-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-full border ${
+                  txFilter === 'all'
+                    ? 'bg-brand-dark border-brand-dark'
+                    : 'bg-white border-gray-200'
+                }`}
               >
                 <Text className={`text-xs font-bold ${txFilter === 'all' ? 'text-amber-400' : 'text-gray-600'}`}>
                   Toutes ({rawTransactions.length})
@@ -367,10 +372,11 @@ export default function DashboardScreen() {
 
               <TouchableOpacity
                 onPress={() => setTxFilter('contribution')}
-                className={`px-3 py-1.5 rounded-full border ${txFilter === 'contribution'
-                  ? 'bg-brand-dark border-brand-dark'
-                  : 'bg-white border-gray-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-full border ${
+                  txFilter === 'contribution'
+                    ? 'bg-brand-dark border-brand-dark'
+                    : 'bg-white border-gray-200'
+                }`}
               >
                 <Text className={`text-xs font-bold ${txFilter === 'contribution' ? 'text-amber-400' : 'text-gray-600'}`}>
                   Cotisations ↗
@@ -379,10 +385,11 @@ export default function DashboardScreen() {
 
               <TouchableOpacity
                 onPress={() => setTxFilter('payout')}
-                className={`px-3 py-1.5 rounded-full border ${txFilter === 'payout'
-                  ? 'bg-brand-dark border-brand-dark'
-                  : 'bg-white border-gray-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-full border ${
+                  txFilter === 'payout'
+                    ? 'bg-brand-dark border-brand-dark'
+                    : 'bg-white border-gray-200'
+                }`}
               >
                 <Text className={`text-xs font-bold ${txFilter === 'payout' ? 'text-amber-400' : 'text-gray-600'}`}>
                   Versements Reçus ↙
@@ -410,10 +417,11 @@ export default function DashboardScreen() {
                     <View className="flex-row items-center space-x-3 flex-1 pr-2">
                       {/* Icon Badge */}
                       <View
-                        className={`w-10 h-10 rounded-2xl items-center justify-center border ${isPayout
-                          ? 'bg-emerald-50 border-emerald-200'
-                          : 'bg-amber-50 border-amber-200'
-                          }`}
+                        className={`w-10 h-10 rounded-2xl items-center justify-center border ${
+                          isPayout
+                            ? 'bg-emerald-50 border-emerald-200'
+                            : 'bg-amber-50 border-amber-200'
+                        }`}
                       >
                         {isPayout ? (
                           <ArrowDownLeftIcon size={20} color="#10B981" />
@@ -434,14 +442,15 @@ export default function DashboardScreen() {
 
                     <View className="items-end">
                       <Text
-                        className={`text-sm font-black ${isPayout ? 'text-emerald-600' : 'text-brand-dark'
-                          }`}
+                        className={`text-sm font-black ${
+                          isPayout ? 'text-emerald-600' : 'text-brand-dark'
+                        }`}
                       >
                         {isPayout ? '+' : '-'} {tx.amountFcfa.toLocaleString('fr-FR')} FCFA
                       </Text>
                       <View className="flex-row items-center space-x-1 mt-0.5">
                         <Text className="text-[10px] font-bold text-gray-400">
-                          {tx.provider === 'wave' ? '🌊 Wave' : '🍊 OM'}
+                          {tx.provider === 'wave' ? 'Wave' : 'Orange Money'}
                         </Text>
                         <ReceiptIcon size={12} color="#9CA3AF" />
                       </View>
@@ -555,10 +564,10 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* SECTION: CONFIGURATION DU MOYEN DE PAIEMENT */}
+          {/* SECTION: CONFIGURATION DU MOYEN DE PAIEMENT UNIFIÉE */}
           <View className="bg-white rounded-3xl p-5 mb-6 shadow-sm border border-gray-100">
             <Text className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
-              Moyen de Paiement pour Retraits (Wave / OM)
+              Moyen de Paiement pour Retraits & Versements
             </Text>
 
             <View className="flex-row items-center justify-between p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 mb-3">
@@ -566,7 +575,7 @@ export default function DashboardScreen() {
                 <SmartphoneIcon size={22} color="#D97706" />
                 <View>
                   <Text className="text-sm font-extrabold text-brand-dark">
-                    {activePaymentProvider === 'wave' ? 'Wave Sénégal 🌊' : 'Orange Money 🍊'}
+                    {activePaymentProvider === 'wave' ? 'Wave Sénégal' : 'Orange Money'}
                   </Text>
                   <Text className="text-xs font-semibold text-gray-600">
                     Compte : {activePaymentPhone}
@@ -580,42 +589,10 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               onPress={() => setIsPaymentModalOpen(true)}
-              className="w-full bg-brand-yellow py-3 rounded-xl items-center shadow-sm border border-amber-300"
+              className="w-full bg-brand-yellow py-3.5 rounded-2xl items-center shadow-sm border border-amber-300"
             >
               <Text className="text-xs font-black text-brand-dark uppercase tracking-wider">
                 Configurer mon moyen de paiement
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* SECTION: RETRAIT PAR CARTE VIA WHATSAPP ADMIN */}
-          <View className="bg-white rounded-3xl p-5 mb-6 shadow-sm border border-gray-100">
-            <View className="flex-row items-center space-x-3 mb-2">
-              <View className="w-10 h-10 rounded-2xl bg-emerald-50 items-center justify-center border border-emerald-200">
-                <CreditCardIcon size={22} color="#059669" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-extrabold text-brand-dark">
-                  Retrait par Carte Bancaire / Virement
-                </Text>
-                <Text className="text-xs text-gray-500 mt-0.5">
-                  Virement direct sur votre carte Visa / Mastercard
-                </Text>
-              </View>
-            </View>
-
-            <Text className="text-xs text-gray-600 leading-relaxed mb-4">
-              Pour effectuer un retrait ou un virement sur carte bancaire, contactez directement l'administrateur Tontine Express sur WhatsApp.
-            </Text>
-
-            <TouchableOpacity
-              onPress={handleContactAdminWhatsApp}
-              activeOpacity={0.85}
-              className="w-full bg-emerald-600 active:bg-emerald-700 py-3.5 rounded-2xl items-center justify-center flex-row space-x-2 shadow-sm"
-            >
-              <WhatsAppIcon size={20} color="#FFFFFF" />
-              <Text className="text-xs font-black text-white uppercase tracking-wider">
-                Contacter l'Admin sur WhatsApp
               </Text>
             </TouchableOpacity>
           </View>
@@ -683,10 +660,11 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => setActiveTab('home')}
           activeOpacity={0.85}
-          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${activeTab === 'home'
-            ? 'bg-amber-400/20 border border-amber-300'
-            : 'bg-transparent'
-            }`}
+          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${
+            activeTab === 'home'
+              ? 'bg-amber-400/20 border border-amber-300'
+              : 'bg-transparent'
+          }`}
         >
           <HomeIcon
             size={22}
@@ -702,10 +680,11 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => setActiveTab('tontines')}
           activeOpacity={0.85}
-          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${activeTab === 'tontines'
-            ? 'bg-amber-400/20 border border-amber-300'
-            : 'bg-transparent'
-            }`}
+          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${
+            activeTab === 'tontines'
+              ? 'bg-amber-400/20 border border-amber-300'
+              : 'bg-transparent'
+          }`}
         >
           <TontineIcon
             size={22}
@@ -721,10 +700,11 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => setActiveTab('profile')}
           activeOpacity={0.85}
-          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${activeTab === 'profile'
-            ? 'bg-amber-400/20 border border-amber-300'
-            : 'bg-transparent'
-            }`}
+          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${
+            activeTab === 'profile'
+              ? 'bg-amber-400/20 border border-amber-300'
+              : 'bg-transparent'
+          }`}
         >
           <UserIcon
             size={22}
@@ -762,10 +742,11 @@ export default function DashboardScreen() {
                   <TouchableOpacity
                     key={tier.id}
                     onPress={() => setSelectedTier(tier)}
-                    className={`p-4 rounded-2xl mb-3 border ${isSelected
-                      ? 'bg-amber-50 border-amber-400 shadow-sm'
-                      : 'bg-gray-50 border-gray-200'
-                      }`}
+                    className={`p-4 rounded-2xl mb-3 border ${
+                      isSelected
+                        ? 'bg-amber-50 border-amber-400 shadow-sm'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
                   >
                     <View className="flex-row justify-between items-center">
                       <View>
@@ -859,10 +840,11 @@ export default function DashboardScreen() {
               <View className="mb-6">
                 <View className="items-center my-3">
                   <View
-                    className={`w-14 h-14 rounded-full items-center justify-center mb-2 border ${selectedTxModal.type === 'payout'
-                      ? 'bg-emerald-50 border-emerald-300'
-                      : 'bg-amber-50 border-amber-300'
-                      }`}
+                    className={`w-14 h-14 rounded-full items-center justify-center mb-2 border ${
+                      selectedTxModal.type === 'payout'
+                        ? 'bg-emerald-50 border-emerald-300'
+                        : 'bg-amber-50 border-amber-300'
+                    }`}
                   >
                     {selectedTxModal.type === 'payout' ? (
                       <ArrowDownLeftIcon size={28} color="#10B981" />
@@ -887,7 +869,7 @@ export default function DashboardScreen() {
                   <View className="flex-row justify-between">
                     <Text className="text-xs text-gray-500">Moyen de paiement :</Text>
                     <Text className="text-xs font-bold text-brand-dark">
-                      {selectedTxModal.provider === 'wave' ? '🌊 Wave Sénégal' : '🍊 Orange Money'}
+                      {selectedTxModal.provider === 'wave' ? 'Wave Sénégal' : 'Orange Money'}
                     </Text>
                   </View>
                   <View className="flex-row justify-between">
@@ -958,13 +940,13 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-      {/* MODAL 5: PAYMENT METHOD CONFIGURATION SHEET */}
+      {/* MODAL 5: UNIFIED PAYMENT METHOD CONFIGURATION SHEET (WAVE / OM / CARTE WHATSAPP) */}
       <Modal visible={isPaymentModalOpen} animationType="slide" transparent>
         <View className="flex-1 justify-end bg-black/50">
           <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
             <View className="flex-row justify-between items-center mb-4 pb-2 border-b border-gray-100">
               <Text className="text-xl font-black text-brand-dark uppercase">
-                Moyen de Paiement Réception
+                Moyen de Paiement & Retrait
               </Text>
               <TouchableOpacity onPress={() => setIsPaymentModalOpen(false)}>
                 <Text className="text-xl font-bold text-gray-400">✕</Text>
@@ -972,53 +954,96 @@ export default function DashboardScreen() {
             </View>
 
             <Text className="text-xs text-gray-500 mb-4 font-medium">
-              Choisissez l'opérateur sur lequel vous souhaitez recevoir vos versements de tontines :
+              Sélectionnez l'option de paiement ou de retrait souhaitée :
             </Text>
 
-            {/* Provider Selection Options */}
-            <View className="flex-row space-x-3 mb-4">
+            {/* 3-Tab Choice Selector */}
+            <View className="flex-row space-x-2 mb-5">
+              {/* Tab 1: Wave */}
               <TouchableOpacity
-                onPress={() => setSelectedProvider('wave')}
-                className={`flex-1 p-4 rounded-2xl border items-center ${selectedProvider === 'wave'
-                  ? 'bg-amber-50 border-amber-400'
-                  : 'bg-gray-50 border-gray-200'
-                  }`}
+                onPress={() => setSelectedProviderTab('wave')}
+                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${
+                  selectedProviderTab === 'wave'
+                    ? 'bg-amber-50 border-amber-400 shadow-sm'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
               >
-                <Text className="text-2xl mb-1">🌊</Text>
-                <Text className="text-xs font-black text-brand-dark">Wave Sénégal</Text>
+                <SmartphoneIcon size={20} color={selectedProviderTab === 'wave' ? '#D97706' : '#9CA3AF'} />
+                <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Wave</Text>
               </TouchableOpacity>
 
+              {/* Tab 2: Orange Money */}
               <TouchableOpacity
-                onPress={() => setSelectedProvider('orange_money')}
-                className={`flex-1 p-4 rounded-2xl border items-center ${selectedProvider === 'orange_money'
-                  ? 'bg-amber-50 border-amber-400'
-                  : 'bg-gray-50 border-gray-200'
-                  }`}
+                onPress={() => setSelectedProviderTab('orange_money')}
+                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${
+                  selectedProviderTab === 'orange_money'
+                    ? 'bg-amber-50 border-amber-400 shadow-sm'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
               >
-                <Text className="text-2xl mb-1">🍊</Text>
-                <Text className="text-xs font-black text-brand-dark">Orange Money</Text>
+                <SmartphoneIcon size={20} color={selectedProviderTab === 'orange_money' ? '#D97706' : '#9CA3AF'} />
+                <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Orange Money</Text>
+              </TouchableOpacity>
+
+              {/* Tab 3: Carte / Virement */}
+              <TouchableOpacity
+                onPress={() => setSelectedProviderTab('card')}
+                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${
+                  selectedProviderTab === 'card'
+                    ? 'bg-amber-50 border-amber-400 shadow-sm'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <CreditCardIcon size={20} color={selectedProviderTab === 'card' ? '#D97706' : '#9CA3AF'} />
+                <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Carte / Visa</Text>
               </TouchableOpacity>
             </View>
 
-            <Text className="text-xs font-semibold text-gray-600 mb-2">
-              Numéro de téléphone rattaché ({selectedProvider === 'wave' ? 'Wave' : 'OM'})
-            </Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-300 rounded-xl p-3.5 text-base font-bold text-brand-dark tracking-wider mb-5"
-              placeholder="+221771234567"
-              keyboardType="phone-pad"
-              value={paymentPhoneInput}
-              onChangeText={setPaymentPhoneInput}
-            />
+            {/* TAB CONTENT: WAVE OR OM */}
+            {selectedProviderTab !== 'card' ? (
+              <View>
+                <Text className="text-xs font-semibold text-gray-600 mb-2">
+                  Numéro de téléphone rattaché ({selectedProviderTab === 'wave' ? 'Wave' : 'Orange Money'})
+                </Text>
+                <TextInput
+                  className="bg-gray-50 border border-gray-300 rounded-xl p-3.5 text-base font-bold text-brand-dark tracking-wider mb-5"
+                  placeholder="+221771234567"
+                  keyboardType="phone-pad"
+                  value={paymentPhoneInput}
+                  onChangeText={setPaymentPhoneInput}
+                />
 
-            <TouchableOpacity
-              onPress={handleSavePaymentMethod}
-              className="w-full bg-brand-yellow py-4 rounded-2xl items-center shadow-md shadow-amber-400/30"
-            >
-              <Text className="text-base font-black text-brand-dark uppercase tracking-wider">
-                ENREGISTRER CE MOYEN DE PAIEMENT
-              </Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSavePaymentMethod}
+                  className="w-full bg-brand-yellow py-4 rounded-2xl items-center shadow-md shadow-amber-400/30 border border-amber-300"
+                >
+                  <Text className="text-base font-black text-brand-dark uppercase tracking-wider">
+                    ENREGISTRER CE MOYEN
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* TAB CONTENT: CARTE BANCAIRE VIA WHATSAPP ADMIN */
+              <View className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 mb-3">
+                <Text className="text-sm font-extrabold text-emerald-900 mb-1">
+                  Retrait & Virement par Carte Bancaire
+                </Text>
+                <Text className="text-xs text-emerald-800 leading-relaxed mb-4">
+                  Pour effectuer un retrait par carte Visa/Mastercard ou configurer un virement bancaire, contactez directement l'administrateur Tontine Express sur WhatsApp.
+                </Text>
+
+                <TouchableOpacity
+                  onPress={handleContactAdminWhatsApp}
+                  activeOpacity={0.85}
+                  className="w-full bg-emerald-600 active:bg-emerald-700 py-3.5 rounded-2xl items-center justify-center flex-row space-x-2 shadow-sm"
+                >
+                  <WhatsAppIcon size={20} color="#FFFFFF" />
+                  <Text className="text-xs font-black text-white uppercase tracking-wider">
+                    Contacter l'Admin sur WhatsApp
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>

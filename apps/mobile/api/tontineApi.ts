@@ -261,7 +261,7 @@ export const tontineApi = {
     } catch (error) {
       return {
         success: true,
-        message: `Vous avez rejoint le cercle officiel Tontine Express avec le code ${payload.inviteCode}`,
+        message: `Vous avez rejoint le Natt Special de Tontine Express avec le code ${payload.inviteCode}`,
       };
     }
   },

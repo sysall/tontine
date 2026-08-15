@@ -359,11 +359,10 @@ export default function DashboardScreen() {
             <View className="flex-row space-x-2 mb-4">
               <TouchableOpacity
                 onPress={() => setTxFilter('all')}
-                className={`px-3 py-1.5 rounded-full border ${
-                  txFilter === 'all'
+                className={`px-3 py-1.5 rounded-full border ${txFilter === 'all'
                     ? 'bg-brand-dark border-brand-dark'
                     : 'bg-white border-gray-200'
-                }`}
+                  }`}
               >
                 <Text className={`text-xs font-bold ${txFilter === 'all' ? 'text-amber-400' : 'text-gray-600'}`}>
                   Toutes ({rawTransactions.length})
@@ -372,11 +371,10 @@ export default function DashboardScreen() {
 
               <TouchableOpacity
                 onPress={() => setTxFilter('contribution')}
-                className={`px-3 py-1.5 rounded-full border ${
-                  txFilter === 'contribution'
+                className={`px-3 py-1.5 rounded-full border ${txFilter === 'contribution'
                     ? 'bg-brand-dark border-brand-dark'
                     : 'bg-white border-gray-200'
-                }`}
+                  }`}
               >
                 <Text className={`text-xs font-bold ${txFilter === 'contribution' ? 'text-amber-400' : 'text-gray-600'}`}>
                   Cotisations ↗
@@ -385,11 +383,10 @@ export default function DashboardScreen() {
 
               <TouchableOpacity
                 onPress={() => setTxFilter('payout')}
-                className={`px-3 py-1.5 rounded-full border ${
-                  txFilter === 'payout'
+                className={`px-3 py-1.5 rounded-full border ${txFilter === 'payout'
                     ? 'bg-brand-dark border-brand-dark'
                     : 'bg-white border-gray-200'
-                }`}
+                  }`}
               >
                 <Text className={`text-xs font-bold ${txFilter === 'payout' ? 'text-amber-400' : 'text-gray-600'}`}>
                   Versements Reçus ↙
@@ -417,11 +414,10 @@ export default function DashboardScreen() {
                     <View className="flex-row items-center space-x-3 flex-1 pr-2">
                       {/* Icon Badge */}
                       <View
-                        className={`w-10 h-10 rounded-2xl items-center justify-center border ${
-                          isPayout
+                        className={`w-10 h-10 rounded-2xl items-center justify-center border ${isPayout
                             ? 'bg-emerald-50 border-emerald-200'
                             : 'bg-amber-50 border-amber-200'
-                        }`}
+                          }`}
                       >
                         {isPayout ? (
                           <ArrowDownLeftIcon size={20} color="#10B981" />
@@ -442,9 +438,8 @@ export default function DashboardScreen() {
 
                     <View className="items-end">
                       <Text
-                        className={`text-sm font-black ${
-                          isPayout ? 'text-emerald-600' : 'text-brand-dark'
-                        }`}
+                        className={`text-sm font-black ${isPayout ? 'text-emerald-600' : 'text-brand-dark'
+                          }`}
                       >
                         {isPayout ? '+' : '-'} {tx.amountFcfa.toLocaleString('fr-FR')} FCFA
                       </Text>
@@ -514,11 +509,11 @@ export default function DashboardScreen() {
             <View className="flex-row items-center space-x-2 mb-1">
               <JoinIcon size={20} color="#1A1A1A" />
               <Text className="text-sm font-black text-brand-dark">
-                Rejoindre un Cercle Privé
+                Rejoindre un Natt Special
               </Text>
             </View>
             <Text className="text-xs text-gray-500 mb-3">
-              Vous avez reçu un code d'invitation par SMS ou de vos proches ?
+              Vous avez reçu un code d'invitation par Notifications ?
             </Text>
             <TouchableOpacity
               onPress={() => setIsJoinModalOpen(true)}
@@ -660,11 +655,10 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => setActiveTab('home')}
           activeOpacity={0.85}
-          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${
-            activeTab === 'home'
+          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${activeTab === 'home'
               ? 'bg-amber-400/20 border border-amber-300'
               : 'bg-transparent'
-          }`}
+            }`}
         >
           <HomeIcon
             size={22}
@@ -680,11 +674,10 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => setActiveTab('tontines')}
           activeOpacity={0.85}
-          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${
-            activeTab === 'tontines'
+          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${activeTab === 'tontines'
               ? 'bg-amber-400/20 border border-amber-300'
               : 'bg-transparent'
-          }`}
+            }`}
         >
           <TontineIcon
             size={22}
@@ -700,11 +693,10 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => setActiveTab('profile')}
           activeOpacity={0.85}
-          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${
-            activeTab === 'profile'
+          className={`flex-1 flex-row items-center justify-center py-2.5 px-3 mx-1 rounded-2xl space-x-2 ${activeTab === 'profile'
               ? 'bg-amber-400/20 border border-amber-300'
               : 'bg-transparent'
-          }`}
+            }`}
         >
           <UserIcon
             size={22}
@@ -742,11 +734,10 @@ export default function DashboardScreen() {
                   <TouchableOpacity
                     key={tier.id}
                     onPress={() => setSelectedTier(tier)}
-                    className={`p-4 rounded-2xl mb-3 border ${
-                      isSelected
+                    className={`p-4 rounded-2xl mb-3 border ${isSelected
                         ? 'bg-amber-50 border-amber-400 shadow-sm'
                         : 'bg-gray-50 border-gray-200'
-                    }`}
+                      }`}
                   >
                     <View className="flex-row justify-between items-center">
                       <View>
@@ -789,7 +780,7 @@ export default function DashboardScreen() {
           <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
             <View className="flex-row justify-between items-center mb-4 pb-2 border-b border-gray-100">
               <Text className="text-xl font-black text-brand-dark uppercase">
-                Rejoindre un Cercle Officiel
+                Rejoindre un Natt Special
               </Text>
               <TouchableOpacity onPress={() => setIsJoinModalOpen(false)}>
                 <Text className="text-xl font-bold text-gray-400">✕</Text>
@@ -840,11 +831,10 @@ export default function DashboardScreen() {
               <View className="mb-6">
                 <View className="items-center my-3">
                   <View
-                    className={`w-14 h-14 rounded-full items-center justify-center mb-2 border ${
-                      selectedTxModal.type === 'payout'
+                    className={`w-14 h-14 rounded-full items-center justify-center mb-2 border ${selectedTxModal.type === 'payout'
                         ? 'bg-emerald-50 border-emerald-300'
                         : 'bg-amber-50 border-amber-300'
-                    }`}
+                      }`}
                   >
                     {selectedTxModal.type === 'payout' ? (
                       <ArrowDownLeftIcon size={28} color="#10B981" />
@@ -962,11 +952,10 @@ export default function DashboardScreen() {
               {/* Tab 1: Wave */}
               <TouchableOpacity
                 onPress={() => setSelectedProviderTab('wave')}
-                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${
-                  selectedProviderTab === 'wave'
+                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${selectedProviderTab === 'wave'
                     ? 'bg-amber-50 border-amber-400 shadow-sm'
                     : 'bg-gray-50 border-gray-200'
-                }`}
+                  }`}
               >
                 <SmartphoneIcon size={20} color={selectedProviderTab === 'wave' ? '#D97706' : '#9CA3AF'} />
                 <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Wave</Text>
@@ -975,11 +964,10 @@ export default function DashboardScreen() {
               {/* Tab 2: Orange Money */}
               <TouchableOpacity
                 onPress={() => setSelectedProviderTab('orange_money')}
-                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${
-                  selectedProviderTab === 'orange_money'
+                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${selectedProviderTab === 'orange_money'
                     ? 'bg-amber-50 border-amber-400 shadow-sm'
                     : 'bg-gray-50 border-gray-200'
-                }`}
+                  }`}
               >
                 <SmartphoneIcon size={20} color={selectedProviderTab === 'orange_money' ? '#D97706' : '#9CA3AF'} />
                 <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Orange Money</Text>
@@ -988,11 +976,10 @@ export default function DashboardScreen() {
               {/* Tab 3: Carte / Virement */}
               <TouchableOpacity
                 onPress={() => setSelectedProviderTab('card')}
-                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${
-                  selectedProviderTab === 'card'
+                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${selectedProviderTab === 'card'
                     ? 'bg-amber-50 border-amber-400 shadow-sm'
                     : 'bg-gray-50 border-gray-200'
-                }`}
+                  }`}
               >
                 <CreditCardIcon size={20} color={selectedProviderTab === 'card' ? '#D97706' : '#9CA3AF'} />
                 <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Carte / Visa</Text>

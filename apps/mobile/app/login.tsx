@@ -20,10 +20,10 @@ import { useAuthStore } from '../store/useAuthStore';
 export default function LoginScreen() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
-  
+
   // Auth Mode State: 'login' or 'register'
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  
+
   // Registration Extra Fields
   const [fullName, setFullName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -31,10 +31,10 @@ export default function LoginScreen() {
   // Phone Form State
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  
+
   // Step: 'phone' or 'otp'
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  
+
   // OTP Form State
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -138,13 +138,13 @@ export default function LoginScreen() {
           <View className="items-center mt-4 mb-6">
             <TontineLogo size="md" />
             <Text className="text-sm font-semibold text-gray-600 mt-2 text-center">
-              L'épargne rotative et collaborative du Sénégal 🇸🇳
+              Contribuez, recevez et avancez ensemble
             </Text>
           </View>
 
           {/* Floating Pure White Card Container */}
           <View className="bg-white rounded-3xl p-6 shadow-xl shadow-gray-200/50 border border-gray-100 flex-1 justify-between mb-4">
-            
+
             {/* Mode Switcher Tabs */}
             <View className="bg-gray-100 p-1.5 rounded-2xl flex-row mb-6">
               <TouchableOpacity
@@ -153,14 +153,12 @@ export default function LoginScreen() {
                   setPhoneError(null);
                   setNameError(null);
                 }}
-                className={`flex-1 py-2.5 rounded-xl items-center ${
-                  mode === 'login' ? 'bg-white shadow-sm' : ''
-                }`}
+                className={`flex-1 py-2.5 rounded-xl items-center ${mode === 'login' ? 'bg-white shadow-sm' : ''
+                  }`}
               >
                 <Text
-                  className={`text-xs font-extrabold uppercase tracking-wider ${
-                    mode === 'login' ? 'text-brand-dark' : 'text-gray-400'
-                  }`}
+                  className={`text-xs font-extrabold uppercase tracking-wider ${mode === 'login' ? 'text-brand-dark' : 'text-gray-400'
+                    }`}
                 >
                   Se Connecter
                 </Text>
@@ -172,14 +170,12 @@ export default function LoginScreen() {
                   setPhoneError(null);
                   setNameError(null);
                 }}
-                className={`flex-1 py-2.5 rounded-xl items-center ${
-                  mode === 'register' ? 'bg-white shadow-sm' : ''
-                }`}
+                className={`flex-1 py-2.5 rounded-xl items-center ${mode === 'register' ? 'bg-white shadow-sm' : ''
+                  }`}
               >
                 <Text
-                  className={`text-xs font-extrabold uppercase tracking-wider ${
-                    mode === 'register' ? 'text-brand-dark' : 'text-gray-400'
-                  }`}
+                  className={`text-xs font-extrabold uppercase tracking-wider ${mode === 'register' ? 'text-brand-dark' : 'text-gray-400'
+                    }`}
                 >
                   S'inscrire
                 </Text>
@@ -190,7 +186,7 @@ export default function LoginScreen() {
             {step === 'phone' ? (
               <View className="flex-1 justify-center">
                 <Text className="text-2xl font-black text-brand-dark tracking-tight mb-1">
-                  {mode === 'login' ? 'Bon retour ! 👋' : 'Créer mon compte 🚀'}
+                  {mode === 'login' ? 'Bon retour ! 👋' : 'Créer mon compte '}
                 </Text>
                 <Text className="text-xs text-gray-500 font-medium mb-6">
                   {mode === 'login'

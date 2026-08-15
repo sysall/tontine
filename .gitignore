@@ -23,6 +23,12 @@ yarn-error.log*
 # Prisma
 services/auth-service/prisma/*.db
 
+# EAS build leftovers
+*.apk
+*.aab
+apps/mobile/build.json
+apps/mobile/apk_url.txt
+
 # Temporary
 tmp/
 .cache/

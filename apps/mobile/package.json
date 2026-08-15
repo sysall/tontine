@@ -7,7 +7,13 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "eas:build:dev": "eas build --platform android --profile development",
+    "eas:build:preview": "eas build --platform android --profile preview",
+    "eas:build:apk": "eas build --platform android --profile production-apk",
+    "eas:build:prod": "eas build --platform android --profile production",
+    "eas:submit": "eas submit --platform android --profile production"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.20.0",

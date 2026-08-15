@@ -16,7 +16,15 @@
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "prisma:generate": "npm run prisma:generate --workspace=services/api",
-    "prisma:push": "npm run prisma:push --workspace=services/api"
+    "prisma:push": "npm run prisma:push --workspace=services/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspace=services/api",
+    "changeset": "changeset",
+    "version": "changeset version && npm install --package-lock-only",
+    "release": "node scripts/tag-release.mjs"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.10"
   },
   "keywords": [
     "tontine",

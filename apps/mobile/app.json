@@ -12,9 +12,11 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tontineexpress.app"
     },
     "android": {
+      "package": "com.tontineexpress.app",
       "adaptiveIcon": {
         "backgroundColor": "#FDFBF7"
       }

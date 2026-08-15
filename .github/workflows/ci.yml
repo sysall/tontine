@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [alpha]
+    paths-ignore:
+      - '**/*.md'
+      - '.changeset/**'
+      - '.vscode/**'
+  pull_request:
+    branches: [main, alpha]
+    paths-ignore:
+      - '**/*.md'
+      - '.changeset/**'
+      - '.vscode/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  api:
+    name: API build & typecheck
+    runs-on: ubuntu-latest
+    # The version PR holds the same source as the feature PR that already passed,
+    # and release.yml checks it again before tagging.
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'changeset-release/') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Without the generated client every @prisma/client import is untyped and
+      # the typecheck proves nothing.
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Typecheck
+        run: npm run typecheck --workspace=services/api
+
+      - name: Build
+        run: npm run build --workspace=services/api
+
+  mobile:
+    name: Mobile typecheck
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'changeset-release/') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck --workspace=apps/mobile

@@ -5,6 +5,7 @@
   "description": "API Unifiée Tontine Express (NestJS Monolithe Modulaire)",
   "scripts": {
     "build": "nest build",
+    "typecheck": "tsc --noEmit",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "prisma:generate": "prisma generate",

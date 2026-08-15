@@ -1,0 +1,72 @@
+name: Release
+
+# Pending changesets open the "Version Packages" PR. Merging that PR pushes the
+# release tags, which is what starts the Android build and the API image.
+# On alpha, changesets runs in prerelease mode so versions read -alpha.N.
+on:
+  push:
+    branches: [main, alpha]
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test-gate:
+    name: CI gate (build + typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build API
+        run: npm run build --workspace=services/api
+
+  release:
+    name: Version or tag
+    needs: test-gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # A tag pushed with GITHUB_TOKEN never starts another workflow, so with
+          # the fallback the build workflows have to be run by hand. The PAT also
+          # pushes the changeset-release branch as a real user, which is needed
+          # when Actions aren't allowed to open PRs.
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create version PR or tag the release
+        uses: changesets/action@v1
+        with:
+          version: npm run version
+          publish: npm run release
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}

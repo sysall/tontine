@@ -1,0 +1,63 @@
+name: Mobile Android build (EAS)
+
+# Builds the Android APK on EAS, then attaches it to a GitHub Release.
+# Needs the EXPO_TOKEN secret (expo.dev -> account settings -> Access Tokens) for
+# the account that owns the EAS project. Build-time EXPO_PUBLIC_* values come
+# from the profile env in apps/mobile/eas.json.
+on:
+  push:
+    tags: ['mobile-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: EAS Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # eas build resolves the app config locally before uploading, and the app
+      # takes half its dependencies from the workspace root.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build APK on EAS and fetch the artifact
+        working-directory: apps/mobile
+        run: |
+          set -e
+          eas build --platform android --profile production-apk \
+            --non-interactive --wait --json > build.json
+          node -e "const b=require('./build.json');const x=Array.isArray(b)?b[0]:b;const u=x.artifacts&&(x.artifacts.applicationArchiveUrl||x.artifacts.buildUrl);if(!u){console.error('No APK artifact URL in EAS build result');process.exit(1)}require('fs').writeFileSync('apk_url.txt',u);console.log('APK:',u)"
+          curl -fL "$(cat apk_url.txt)" -o tontine-express.apk
+          ls -la tontine-express.apk
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tontine-android
+          if-no-files-found: error
+          path: apps/mobile/tontine-express.apk
+
+      # A tag gets its own release. A manual run refreshes android-latest.
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/mobile/tontine-express.apk
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'android-latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Tontine Android - latest build' }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}

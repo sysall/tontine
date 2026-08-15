@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "270a2b65-4c7a-4cf3-8a35-27f439da4fba"
+      }
+    },
+    "owner": "sysall",
+    "slug": "tontine"
+  }
+}

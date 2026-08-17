@@ -7,6 +7,7 @@
   },
   "changesets": [
     "api-runs-its-build",
+    "app-moves-to-the-team-project",
     "bundle-again",
     "follow-sdk-54",
     "mobile-points-at-the-api",

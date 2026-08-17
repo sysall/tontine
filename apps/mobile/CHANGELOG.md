@@ -1,5 +1,12 @@
 # tontine-mobile
 
+## 1.1.0-alpha.3
+
+### Patch Changes
+
+- f59a3a0: Build the app from the team's EAS project. The root `app.json` named a second
+  project and only confused things.
+
 ## 1.1.0-alpha.2
 
 ### Minor Changes

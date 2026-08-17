@@ -1,9 +1,12 @@
-# Usage
+# Tontine Express
 
-Two things live in this repo:
+A tontine app for Senegal. Two parts:
 
 - `apps/mobile` — the phone app, built with Expo
 - `services/api` — the API, built with NestJS
+
+How we branch, write changesets and cut releases is in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Run it on your machine
 
@@ -73,47 +76,11 @@ everyone can point at whatever they want without bothering the others.
 Never put a password or a key in `EXPO_PUBLIC_*`. Anyone with the APK can read
 those.
 
-## Day to day
+## Setting up the repository
 
-Branch off `alpha`, never off `main`.
+This only needs doing once, and needs admin rights on the repo.
 
-```bash
-git checkout alpha && git pull
-git checkout -b feat/my-thing
-```
-
-Before you open the PR, write a changeset:
-
-```bash
-npm run changeset
-```
-
-It asks which part you changed and whether it is a patch, minor or major, then
-you write one line about the change. Commit that file with your work. Skip it if
-you only touched docs or CI.
-
-Open the PR against `alpha`. The checks have to be green before it merges.
-
-## Releasing
-
-1. Your PRs land on `alpha`.
-2. A PR called **chore: version packages** shows up on its own. It bumps the
-   version numbers and writes the changelogs.
-3. Merge it. That creates the tags.
-4. `mobile-v*` builds the Android APK and puts it on a GitHub release.
-   `api-v*` builds the API image and pushes it to GitHub packages.
-
-Only the part you changed gets a tag. If you touched the app and not the API,
-only the app is built.
-
-To go from `1.0.1-alpha.3` to a real `1.0.1`, run `npx changeset pre exit` on
-`alpha`, then open a PR from `alpha` to `main`.
-
-You can also build an APK whenever you want without releasing. Go to the Actions
-tab, pick **Mobile Android build (EAS)**, press **Run workflow**. It puts the APK
-on a release called `android-latest`.
-
-## Secrets the repo needs
+### Secrets
 
 Settings → Secrets and variables → Actions → New repository secret.
 
@@ -128,7 +95,7 @@ happens.
 
 Nothing extra is needed for the API image. GitHub handles that itself.
 
-## Settings the repo needs
+### Settings
 
 Settings → Actions → General:
 
@@ -149,7 +116,7 @@ The default branch matters more than it looks. GitHub reads the workflows from
 it, so if it points at a branch without them, the Actions tab looks empty and
 the Run workflow buttons are missing.
 
-## Accounts
+### Accounts
 
 **Expo.** The app belongs to the `tontine-express` organisation on expo.dev. The
 account behind `EXPO_TOKEN` has to be a member of it. That organisation also

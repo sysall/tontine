@@ -18,4 +18,6 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+# `nest start` would recompile from source, and the runner has neither the
+# sources nor tsconfig.json. Run the build that the builder stage produced.
+CMD ["npm", "run", "start:prod"]

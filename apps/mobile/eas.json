@@ -24,7 +24,7 @@
       },
       "env": {
         "EXPO_PUBLIC_ENV": "preview",
-        "EXPO_PUBLIC_API_URL": "https://REPLACE-ME.staging/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://api-production-8dcc.up.railway.app/api/v1"
       }
     },
     "production": {
@@ -35,7 +35,7 @@
       },
       "env": {
         "EXPO_PUBLIC_ENV": "production",
-        "EXPO_PUBLIC_API_URL": "https://REPLACE-ME/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://api-production-8dcc.up.railway.app/api/v1"
       }
     },
     "production-apk": {

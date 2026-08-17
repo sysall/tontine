@@ -27,6 +27,15 @@
     "plugins": [
       "expo-router"
     ],
-    "scheme": "tontineexpress"
+    "scheme": "tontineexpress",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "5ebf9b91-6455-4f21-94c7-6ba706a7f08e"
+      }
+    },
+    "owner": "tontine-express"
   }
 }

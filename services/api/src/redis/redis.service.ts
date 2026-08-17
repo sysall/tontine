@@ -8,22 +8,26 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private isConnected = false;
 
   onModuleInit() {
+    const url = process.env.REDIS_URL;
     const host = process.env.REDIS_HOST || 'localhost';
     const port = parseInt(process.env.REDIS_PORT || '6379', 10);
+    // A hosted Redis hands out credentials in a URL. Host and port alone can
+    // only reach one without a password, which is the local container.
+    const target = url ? new URL(url).host : `${host}:${port}`;
 
-    this.client = new Redis({
-      host,
-      port,
+    const options = {
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
-      retryStrategy: (times) => {
+      retryStrategy: (times: number) => {
         if (times > 2) {
           return null;
         }
         return 500;
       },
-    });
+    };
+
+    this.client = url ? new Redis(url, options) : new Redis({ host, port, ...options });
 
     this.client.on('error', (err) => {
       if (this.isConnected) {
@@ -34,10 +38,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     this.client.connect().then(() => {
       this.isConnected = true;
-      this.logger.log(`Connected to Redis at ${host}:${port}`);
+      this.logger.log(`Connected to Redis at ${target}`);
     }).catch((err) => {
       this.isConnected = false;
-      this.logger.warn(`Redis is not running on ${host}:${port} (${err.message}). Using in-memory fallback store for local dev mode.`);
+      this.logger.warn(`Redis is not running on ${target} (${err.message}). Using in-memory fallback store for local dev mode.`);
     });
   }
 

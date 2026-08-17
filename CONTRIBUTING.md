@@ -58,5 +58,12 @@ GHCR uses `GITHUB_TOKEN`, nothing to set up there.
 
 `eas init` from `apps/mobile` writes `expo.extra.eas.projectId` into `app.json`.
 
-`EXPO_PUBLIC_API_URL` per build profile lives in `apps/mobile/eas.json`. Those
-values ship inside the APK, so keep secrets out of them.
+## Which API the app talks to
+
+A built APK takes its URL from the `eas.json` build profile it was built with,
+so a release build always points at the deployed API. Those values ship inside
+the APK, so keep secrets out of them.
+
+Running the dev server is per-developer: copy `apps/mobile/.env.example` to
+`.env` and point `EXPO_PUBLIC_API_URL` at localhost, your LAN address, or a
+tunnel to your machine. `.env` is ignored, so nobody else inherits your setup.

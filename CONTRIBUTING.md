@@ -58,11 +58,41 @@ GHCR uses `GITHUB_TOKEN`, nothing to set up there.
 
 `eas init` from `apps/mobile` writes `expo.extra.eas.projectId` into `app.json`.
 
+## Pointing at different infrastructure
+
+The API names no provider. It reads five variables and works against whatever
+they point at, local containers or managed services:
+
+| variable | note |
+| --- | --- |
+| `DATABASE_URL` | any Postgres Prisma can reach |
+| `REDIS_URL` | use this for anything with a password or TLS (`rediss://`). `REDIS_HOST`/`REDIS_PORT` cover an unauthenticated local instance |
+| `JWT_SECRET` | the one in `.env.example` is public |
+| `NODE_ENV` | anything other than `production` makes `verifyOtp` accept any 6-digit code |
+| `PORT` | most platforms set it for you |
+
+Copy `.env.example` to `.env` and override what you need. `docker-compose.yml`
+falls back to its own containers when a variable is unset, so
+`DATABASE_URL=... docker compose up api` runs the API alone against a managed
+database.
+
+Without Redis the API keeps OTPs in memory. Fine locally, lost on every restart.
+
 ## Which API the app talks to
 
-A built APK takes its URL from the `eas.json` build profile it was built with,
-so a release build always points at the deployed API. Those values ship inside
-the APK, so keep secrets out of them.
+A build reads `EXPO_PUBLIC_API_URL` from the EAS environment its profile names:
+`production` and `production-apk` from production, `preview` from preview,
+`development` from development. Moving the app to a different API is one command
+and a rebuild, with no commit:
+
+```bash
+cd apps/mobile
+npx eas-cli env:list production
+npx eas-cli env:set --name EXPO_PUBLIC_API_URL --value https://… --environment production
+```
+
+The value ships inside the APK and anyone holding it can read it, so keep
+secrets out of `EXPO_PUBLIC_*`.
 
 Running the dev server is per-developer: copy `apps/mobile/.env.example` to
 `.env` and point `EXPO_PUBLIC_API_URL` at localhost, your LAN address, or a

@@ -41,12 +41,14 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    # Defaults point at the containers below. Set any of these in .env to run the
+    # API against a managed database or cache instead.
     environment:
       PORT: 3000
-      DATABASE_URL: postgresql://tontine_user:tontine_password@postgres:5432/tontine_db?schema=public
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_SECRET: super_secret_tontine_express_jwt_key_2026
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://tontine_user:tontine_password@postgres:5432/tontine_db?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_tontine_express_jwt_key_2026}
     depends_on:
       postgres:
         condition: service_healthy

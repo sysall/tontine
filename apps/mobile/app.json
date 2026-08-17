@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Tontine Express",
-    "slug": "tontine-express",
+    "slug": "tontine",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -33,9 +33,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "5ebf9b91-6455-4f21-94c7-6ba706a7f08e"
+        "projectId": "270a2b65-4c7a-4cf3-8a35-27f439da4fba"
       }
     },
-    "owner": "tontine-express"
+    "owner": "tontinexpress"
   }
 }

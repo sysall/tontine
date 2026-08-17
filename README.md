@@ -118,7 +118,7 @@ the Run workflow buttons are missing.
 
 ### Accounts
 
-**Expo.** The app belongs to the `tontine-express` organisation on expo.dev. The
+**Expo.** The app belongs to the `tontinexpress` organisation on expo.dev. The
 account behind `EXPO_TOKEN` has to be a member of it. That organisation also
 holds the Android signing key, so keep `owner` and `projectId` in
 `apps/mobile/app.json` exactly as they are. Change them and the next APK is

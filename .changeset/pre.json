@@ -5,5 +5,8 @@
     "tontine-mobile": "1.0.0",
     "tontine-api": "1.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "api-runs-its-build",
+    "mobile-points-at-the-api"
+  ]
 }

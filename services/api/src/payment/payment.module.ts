@@ -7,9 +7,9 @@ export class PaymentController {
     return {
       service: 'payment-module',
       supportedProviders: [
-        { id: 'wave', name: 'Wave Senegal', icon: '🌊' },
-        { id: 'orange_money', name: 'Orange Money Senegal', icon: '🍊' },
-        { id: 'free_money', name: 'Free Money Senegal', icon: '📲' },
+        { id: 'wave', name: 'Wave Senegal', icon: '' },
+        { id: 'orange_money', name: 'Orange Money Senegal', icon: '' },
+        { id: 'free_money', name: 'Free Money Senegal', icon: '' },
       ],
       timestamp: new Date(),
     };
@@ -19,4 +19,4 @@ export class PaymentController {
 @Module({
   controllers: [PaymentController],
 })
-export class PaymentModule {}
+export class PaymentModule { }

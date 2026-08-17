@@ -8,6 +8,8 @@
   "changesets": [
     "api-runs-its-build",
     "bundle-again",
-    "mobile-points-at-the-api"
+    "follow-sdk-54",
+    "mobile-points-at-the-api",
+    "urls-are-config"
   ]
 }

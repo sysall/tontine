@@ -30,6 +30,9 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="login" />
           <Stack.Screen name="dashboard" />
+          <Stack.Screen name="my-tontines" />
+          <Stack.Screen name="contribute" />
+          <Stack.Screen name="profile" />
         </Stack>
       </SafeAreaProvider>
     </QueryClientProvider>

@@ -133,7 +133,7 @@ export const LogOutIcon: React.FC<IconProps> = ({ size = 24, color = '#DC2626' }
 );
 
 // 💰 Wallet / Savings Icon
-export const WalletIcon: React.FC<IconProps> = ({ size = 24, color = '#FFC700' }) => (
+export const WalletIcon: React.FC<IconProps> = ({ size = 24, color = '#04252D' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Rect
       x="2"
@@ -248,6 +248,28 @@ export const JoinIcon: React.FC<IconProps> = ({ size = 20, color = '#1A1A1A' }) 
   </Svg>
 );
 
+// 📅 Calendar Icon (Natt Classique)
+export const CalendarIcon: React.FC<IconProps> = ({ size = 22, color = '#1A1A1A' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x="3" y="4" width="18" height="18" rx="4" stroke={color} strokeWidth={1.8} />
+    <Path d="M16 2V6M8 2V6M3 10H21" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+  </Svg>
+);
+
+// ⚡ Bolt / Fast Icon (Tekk Tegui)
+export const BoltIcon: React.FC<IconProps> = ({ size = 22, color = '#1A1A1A' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+// ✨ Sparkles / Event Icon (Natt Événementiel)
+export const SparklesIcon: React.FC<IconProps> = ({ size = 22, color = '#1A1A1A' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 3L14.5 8.5L20 11L14.5 13.5L12 19L9.5 13.5L4 11L9.5 8.5L12 3Z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 // ↙️ Arrow Down Left (Payout / Incoming Money)
 export const ArrowDownLeftIcon: React.FC<IconProps> = ({ size = 20, color = '#10B981' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -286,6 +308,26 @@ export const ReceiptIcon: React.FC<IconProps> = ({ size = 20, color = '#1A1A1A' 
     />
     <Path
       d="M8 7H16M8 11H16M8 15H13"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+// ⚙️ Settings / Engrenage Icon
+export const SettingsIcon: React.FC<IconProps> = ({ size = 22, color = '#0F172A' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M19.4 15A1.65 1.65 0 0020 12a1.65 1.65 0 00-.6-3l.1-.9a2 2 0 00-2-2l-.9.1A1.65 1.65 0 0015 4.6l-.9-.1a2 2 0 00-2-2h-2a2 2 0 00-2 2l-.9.1A1.65 1.65 0 006 4.6l-.9-.1a2 2 0 00-2 2l.1.9A1.65 1.65 0 004 12a1.65 1.65 0 00.6 3l-.1.9a2 2 0 002 2l.9-.1A1.65 1.65 0 009 19.4l.9.1a2 2 0 002 2h2a2 2 0 002-2l.9-.1a1.65 1.65 0 001.6-1.4l.9.1a2 2 0 002-2l-.1-.9z"
       stroke={color}
       strokeWidth={1.8}
       strokeLinecap="round"

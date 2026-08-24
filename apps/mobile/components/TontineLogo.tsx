@@ -13,21 +13,23 @@ export const TontineLogo: React.FC<TontineLogoProps> = ({ size = 'md', showText 
 
   return (
     <View className="flex-row items-center justify-center space-x-3">
-      <View className="items-center justify-center rounded-2xl bg-brand-dark p-2 shadow-md">
-        <Svg width={iconSize} height={iconSize} viewBox="0 0 48 48" fill="none">
-          {/* Gold vault emblem */}
-          <Rect x="6" y="8" width="36" height="32" rx="10" fill="#FFC700" />
-          <Circle cx="24" cy="24" r="10" fill="#1A1A1A" />
-          <Circle cx="24" cy="24" r="5" fill="#FFC700" />
-          <Path d="M24 10 V14 M24 34 V38 M10 24 H14 M34 24 H38" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" />
+      {/* Official T+E Monogram Container */}
+      <View className="items-center justify-center rounded-2xl bg-[#D8C911] p-2 shadow-md">
+        <Svg width={iconSize} height={iconSize} viewBox="0 0 100 100" fill="none">
+          {/* Top T-bar & E-loop Monogram Path */}
+          <Path
+            d="M 12 18 H 82 V 32 H 58 C 70 32 82 40 82 52 C 82 64 70 72 54 72 H 38 C 28 72 24 64 28 54 C 32 46 42 46 54 46 H 68 V 34 H 46 C 26 34 16 48 16 64 C 16 78 30 86 52 86 H 82 V 72 C 82 72 60 72 52 72 C 38 72 30 64 30 52 C 30 40 40 32 54 32 H 34 V 86 H 12 V 18 Z"
+            fill="#04252D"
+          />
         </Svg>
       </View>
+
       {showText && (
         <View className="flex-col">
-          <Text className={`font-bold ${textSize} text-brand-dark tracking-tight`}>
-            TONTINE <Text className="text-amber-500">EXPRESS</Text>
+          <Text className={`font-black ${textSize} text-[#04252D] tracking-tight`}>
+            TONTINE <Text className="text-[#D8C911]">EXPRESS</Text>
           </Text>
-          <Text className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">
+          <Text className="text-[10px] uppercase tracking-widest text-gray-500 font-extrabold">
             Épargne & Tontines en ligne
           </Text>
         </View>

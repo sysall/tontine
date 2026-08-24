@@ -21,9 +21,9 @@ export const SegmentedProgress: React.FC<SegmentedProgressProps> = ({
             key={index}
             className={`h-2 flex-1 rounded-full mx-1 transition-all duration-300 ${
               isActive
-                ? 'bg-brand-yellow w-full shadow-sm'
+                ? 'bg-brand-primary w-full shadow-sm'
                 : isPast
-                ? 'bg-brand-yellow/60'
+                ? 'bg-brand-primary/60'
                 : 'bg-gray-200'
             }`}
           />

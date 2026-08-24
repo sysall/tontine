@@ -10,6 +10,7 @@
   "scripts": {
     "dev:api": "npm run start:dev --workspace=services/api",
     "dev:mobile": "npm run start --workspace=apps/mobile",
+    "dev:web": "npm run dev --workspace=apps/web",
     "dev": "npm run dev:api",
     "db:push": "npm run prisma:push --workspace=services/api",
     "db:generate": "npm run prisma:generate --workspace=services/api",

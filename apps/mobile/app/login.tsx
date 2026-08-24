@@ -230,12 +230,12 @@ export default function LoginScreen() {
                   onPress={handleSendOtp}
                   disabled={requestOtpMutation.isPending}
                   activeOpacity={0.85}
-                  className="w-full bg-brand-yellow active:bg-brand-yellowHover py-4 rounded-2xl items-center justify-center mt-6 shadow-md shadow-amber-400/30 border border-amber-300"
+                  className="w-full bg-brand-dark active:bg-brand-darkCard py-4 rounded-2xl items-center justify-center mt-6 shadow-md shadow-black/20 border border-brand-primary/30"
                 >
                   {requestOtpMutation.isPending ? (
-                    <ActivityIndicator color="#1A1A1A" />
+                    <ActivityIndicator color="#D8C911" />
                   ) : (
-                    <Text className="text-base font-black text-brand-dark uppercase tracking-wider">
+                    <Text className="text-base font-black text-brand-primary uppercase tracking-wider">
                       {mode === 'login' ? 'RECEVOIR LE CODE OTP' : 'CRÉER MON COMPTE'}
                     </Text>
                   )}
@@ -262,20 +262,20 @@ export default function LoginScreen() {
 
                 {/* Dev Mode OTP Banner */}
                 {devOtpCode && (
-                  <View className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 mb-5 flex-row items-center justify-between">
+                  <View className="bg-[#FAF8D6] border border-[#D8C911] rounded-2xl p-3.5 mb-5 flex-row items-center justify-between">
                     <View>
-                      <Text className="text-[11px] font-extrabold text-amber-900 uppercase">
+                      <Text className="text-[11px] font-extrabold text-[#04252D] uppercase">
                         Code OTP Test Dev :
                       </Text>
-                      <Text className="text-lg font-black tracking-widest text-amber-700">
+                      <Text className="text-lg font-black tracking-widest text-[#04252D]">
                         {devOtpCode}
                       </Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => setOtpCode(devOtpCode)}
-                      className="px-3 py-1.5 bg-amber-400 rounded-xl"
+                      className="px-3.5 py-1.5 bg-[#D8C911] rounded-xl"
                     >
-                      <Text className="text-xs font-black text-brand-dark">Remplir</Text>
+                      <Text className="text-xs font-extrabold text-[#04252D]">Remplir</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -303,12 +303,12 @@ export default function LoginScreen() {
                   onPress={handleVerifyOtp}
                   disabled={verifyOtpMutation.isPending}
                   activeOpacity={0.85}
-                  className="w-full bg-brand-yellow active:bg-brand-yellowHover py-4 rounded-2xl items-center justify-center mt-4 shadow-md shadow-amber-400/30 border border-amber-300"
+                  className="w-full bg-brand-dark active:bg-brand-darkCard py-4 rounded-2xl items-center justify-center mt-4 shadow-md shadow-black/20 border border-brand-primary/30"
                 >
                   {verifyOtpMutation.isPending ? (
-                    <ActivityIndicator color="#1A1A1A" />
+                    <ActivityIndicator color="#D8C911" />
                   ) : (
-                    <Text className="text-base font-black text-brand-dark uppercase tracking-wider">
+                    <Text className="text-base font-black text-brand-primary uppercase tracking-wider">
                       VALIDER ET CONTINUER
                     </Text>
                   )}
@@ -319,7 +319,7 @@ export default function LoginScreen() {
                   onPress={() => setStep('phone')}
                   className="mt-4 py-2 items-center"
                 >
-                  <Text className="text-xs font-bold text-amber-600">
+                  <Text className="text-xs font-extrabold text-[#04252D]">
                     Modifier le numéro de téléphone
                   </Text>
                 </TouchableOpacity>

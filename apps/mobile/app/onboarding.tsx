@@ -94,8 +94,8 @@ export default function OnboardingScreen() {
             className="flex-1 items-center justify-center px-8 py-4"
           >
             {/* Category Tag Badge */}
-            <View className="mb-4 px-3 py-1 bg-amber-100 rounded-full border border-amber-300">
-              <Text className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+            <View className="mb-4 px-3.5 py-1 bg-amber-100 rounded-full border border-amber-300">
+              <Text className="text-xs font-black text-amber-900 uppercase tracking-wider">
                 {slide.badge}
               </Text>
             </View>
@@ -121,12 +121,12 @@ export default function OnboardingScreen() {
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.85}
-          className="w-full bg-brand-yellow active:bg-brand-yellowHover py-4 rounded-2xl items-center justify-center shadow-lg shadow-amber-400/30 border border-amber-300 flex-row space-x-2"
+          className="w-full bg-brand-dark active:bg-brand-darkCard py-4 rounded-2xl items-center justify-center shadow-lg shadow-black/20 flex-row space-x-2 border border-brand-primary/30"
         >
-          <Text className="text-lg font-extrabold text-brand-dark tracking-wider uppercase">
+          <Text className="text-lg font-black text-brand-primary tracking-wider uppercase">
             {currentSlideIndex === SLIDES.length - 1 ? 'COMMENCER' : 'SUIVANT'}
           </Text>
-          <Text className="text-xl font-bold text-brand-dark">→</Text>
+          <Text className="text-xl font-bold text-brand-primary">→</Text>
         </TouchableOpacity>
 
         {/* Dynamic page hint */}

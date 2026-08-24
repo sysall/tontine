@@ -199,7 +199,104 @@ export class TontineController {
   }
 }
 
+export class ProcessPayoutDto {
+  subscriptionId: string;
+  provider: 'Wave' | 'Orange Money' | 'Virement';
+}
+
+@ApiTags('Admin - Backoffice Tontine Express')
+@Controller('api/v1/admin')
+export class AdminTontineController {
+  private readonly logger = new Logger(AdminTontineController.name);
+
+  @Get('treasury')
+  @ApiOperation({ summary: 'Vue d\'ensemble de la Trésorerie Unique Tontine Express' })
+  getTreasuryOverview() {
+    return {
+      success: true,
+      treasury: {
+        totalBalanceFcfa: 48500000,
+        totalCollectedFcfa: 125000000,
+        totalPaidOutFcfa: 76500000,
+        pendingPayoutsCount: 3,
+        pendingPayoutsTotalFcfa: 4500000,
+        activeClientsCount: 420,
+        activeSubscriptionsCount: 580,
+        solvencyRatioPercent: 163.5,
+      },
+    };
+  }
+
+  @Get('payouts/eligible')
+  @ApiOperation({ summary: 'Liste des clients ayant atteint 70% de cotisation et éligibles au versement 100%' })
+  getEligiblePayouts() {
+    return {
+      success: true,
+      payoutTriggerThresholdPercent: 70,
+      eligibleSubscriptions: [
+        {
+          id: 'sub-101',
+          clientId: 'cli-1',
+          clientName: 'Mamadou Diallo',
+          clientPhone: '+221 77 450 12 34',
+          categoryTitle: 'Natt Classique Mensuel 1M',
+          targetAmountFcfa: 1000000,
+          contributedAmountFcfa: 750000,
+          progressPercent: 75.0,
+          payoutTriggerPercent: 70,
+          status: 'ELIGIBLE_PAYOUT',
+        },
+        {
+          id: 'sub-102',
+          clientId: 'cli-4',
+          clientName: 'Fatou Binetou Fall',
+          clientPhone: '+221 76 543 21 09',
+          categoryTitle: 'Natt Événement — Tabaski 2026',
+          targetAmountFcfa: 500000,
+          contributedAmountFcfa: 360000,
+          progressPercent: 72.0,
+          payoutTriggerPercent: 70,
+          status: 'ELIGIBLE_PAYOUT',
+        },
+        {
+          id: 'sub-103',
+          clientId: 'cli-5',
+          clientName: 'Ibrahima Gueye',
+          clientPhone: '+221 77 999 11 22',
+          categoryTitle: 'Tekk Tegui Projet Matériel 3M',
+          targetAmountFcfa: 3000000,
+          contributedAmountFcfa: 2150000,
+          progressPercent: 71.6,
+          payoutTriggerPercent: 70,
+          status: 'ELIGIBLE_PAYOUT',
+        },
+      ],
+    };
+  }
+
+  @Post('payouts/process')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Exécuter le versement 100% à un client éligible à 70%' })
+  processPayout(@Body() dto: ProcessPayoutDto) {
+    this.logger.log(`Processing payout for subscription ${dto.subscriptionId} via ${dto.provider}`);
+    const reference = `${dto.provider === 'Wave' ? 'WV' : dto.provider === 'Orange Money' ? 'OM' : 'VIR'}-PAYOUT-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    return {
+      success: true,
+      message: `Versement de 100% exécuté avec succès depuis la Trésorerie Unique !`,
+      transaction: {
+        subscriptionId: dto.subscriptionId,
+        provider: dto.provider,
+        reference,
+        status: 'SUCCESS',
+        processedAt: new Date().toISOString(),
+      },
+    };
+  }
+}
+
 @Module({
-  controllers: [TontineController],
+  controllers: [TontineController, AdminTontineController],
 })
 export class TontineModule { }
+

@@ -26,7 +26,7 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isLowConfidence ? 'rgba(216, 201, 17, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: isLowConfidence ? '#D8C911' : '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isLowConfidence ? 'rgba(217, 163, 58, 0.12)' : 'rgba(25, 166, 106, 0.12)', color: isLowConfidence ? '#D9A33A' : '#19A66A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <ShieldAlert size={22} />
             </div>
             <div>
@@ -43,8 +43,8 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
 
         {/* OCR Result Banner */}
         <div style={{
-          background: isLowConfidence ? 'rgba(216, 201, 17, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-          border: `1px solid ${isLowConfidence ? 'rgba(216, 201, 17, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
+          background: isLowConfidence ? 'rgba(217, 163, 58, 0.1)' : 'rgba(25, 166, 106, 0.1)',
+          border: `1px solid ${isLowConfidence ? 'rgba(217, 163, 58, 0.35)' : 'rgba(25, 166, 106, 0.35)'}`,
           borderRadius: '12px',
           padding: '1rem',
           marginBottom: '1.25rem',
@@ -53,9 +53,9 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {isLowConfidence ? <AlertTriangle size={22} color="#D8C911" /> : <CheckCircle2 size={22} color="#10B981" />}
+            {isLowConfidence ? <AlertTriangle size={22} color="#D9A33A" /> : <CheckCircle2 size={22} color="#19A66A" />}
             <div>
-              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: isLowConfidence ? '#D8C911' : '#34d399' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: isLowConfidence ? '#D9A33A' : '#19A66A' }}>
                 {isLowConfidence ? 'OCR Inconcluant — Validation Manuelle Requise par l\'Admin' : 'OCR Concluant (Haute Confiance)'}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -72,7 +72,7 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
         {/* Grid: Left Document Images Preview, Right Extracted OCR Data */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
           {/* Left: Document View */}
-          <div style={{ background: 'rgba(4, 37, 45, 0.7)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1rem' }}>
+          <div style={{ background: 'rgba(23, 63, 115, 0.04)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
               <button 
                 className={`btn btn-sm ${activeImageTab === 'front' ? 'btn-primary' : 'btn-secondary'}`}
@@ -98,7 +98,7 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
               height: '240px',
               borderRadius: '12px',
               overflow: 'hidden',
-              background: '#031c22',
+              background: 'rgba(23, 63, 115, 0.06)',
               border: '1px dashed var(--border-color)',
               display: 'flex',
               alignItems: 'center',
@@ -118,22 +118,22 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
           </div>
 
           {/* Right: Extracted OCR Fields Comparison */}
-          <div style={{ background: 'rgba(4, 37, 45, 0.7)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ background: 'rgba(23, 63, 115, 0.04)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <h4 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <FileText size={16} color="#D8C911" />
+                <FileText size={16} color="#19A66A" />
                 <span>Champs Extraits par OCR</span>
               </h4>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Type de Pièce :</span>
-                  <span style={{ fontWeight: 800, color: '#D8C911' }}>{record.documentType}</span>
+                  <span style={{ fontWeight: 800, color: '#19A66A' }}>{record.documentType}</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>NIN (N° CNI) Extrait :</span>
-                  <span style={{ fontWeight: 800, fontFamily: 'monospace', color: '#F8FAF7' }}>{record.extractedNin}</span>
+                  <span style={{ fontWeight: 800, fontFamily: 'monospace', color: '#173F73' }}>{record.extractedNin}</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>
@@ -148,7 +148,7 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Date d'Expiration :</span>
-                  <span style={{ fontWeight: 700, color: '#10B981' }}>{record.extractedExpiryDate}</span>
+                  <span style={{ fontWeight: 700, color: '#19A66A' }}>{record.extractedExpiryDate}</span>
                 </div>
               </div>
             </div>
@@ -176,7 +176,7 @@ export const KycDetailModal: React.FC<KycDetailModalProps> = ({
           <button 
             type="button"
             className="btn"
-            style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+            style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}
             onClick={() => onReject(record.id, adminNotes || 'Document non conforme ou illisible.')}
           >
             <XCircle size={16} />

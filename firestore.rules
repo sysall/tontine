@@ -1,0 +1,61 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 1. Permanent Catalogs (/natt_catalogs/{catalogId})
+    match /natt_catalogs/{catalogId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // 2. Dynamic Event Natts (/event_natts/{eventId})
+    match /event_natts/{eventId} {
+      // Lecture permise si l'événement est actif pour tous les connectés, ou tout accès pour les admins
+      allow read: if isAuthenticated() && (resource.data.status == 'ACTIVE' || isAdmin());
+      // Écriture strictement réservée aux administrateurs (Back-Office Web)
+      allow write: if isAdmin();
+    }
+
+    // 3. User Subscriptions (/user_natts/{userNattId})
+    match /user_natts/{userNattId} {
+      // Lecture si le client est le propriétaire de la souscription OU s'il est administrateur
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      // Écriture STRICTEMENT INTERDITE aux clients mobiles.
+      // Toutes les mutations (souscriptions, calculs 70%, déblocages) sont exécutées de manière sécurisée par le backend via firebase-admin.
+      allow write: if false;
+
+      // 4. Sub-collection Payments (/user_natts/{userNattId}/payments/{paymentId})
+      match /payments/{paymentId} {
+        allow read: if isOwner(get(/databases/$(database)/documents/user_natts/$(userNattId)).data.userId) || isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // 5. Central Treasury (/treasury/{vaultId})
+    match /treasury/{vaultId} {
+      allow read: if isAdmin();
+      // Écriture client interdite (gérée uniquement par le backend via firebase-admin transaction)
+      allow write: if false;
+    }
+
+    // 6. Global Financial Transactions (/transactions/{transactionId})
+    match /transactions/{transactionId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow write: if false;
+    }
+  }
+}

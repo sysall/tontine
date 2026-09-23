@@ -233,7 +233,7 @@ export default function LoginScreen() {
                   className="w-full bg-brand-dark active:bg-brand-darkCard py-4 rounded-2xl items-center justify-center mt-6 shadow-md shadow-black/20 border border-brand-primary/30"
                 >
                   {requestOtpMutation.isPending ? (
-                    <ActivityIndicator color="#D8C911" />
+                    <ActivityIndicator color="#19A66A" />
                   ) : (
                     <Text className="text-base font-black text-brand-primary uppercase tracking-wider">
                       {mode === 'login' ? 'RECEVOIR LE CODE OTP' : 'CRÉER MON COMPTE'}
@@ -262,20 +262,20 @@ export default function LoginScreen() {
 
                 {/* Dev Mode OTP Banner */}
                 {devOtpCode && (
-                  <View className="bg-[#FAF8D6] border border-[#D8C911] rounded-2xl p-3.5 mb-5 flex-row items-center justify-between">
+                  <View className="bg-[#D4F2E4] border border-[#19A66A] rounded-2xl p-3.5 mb-5 flex-row items-center justify-between">
                     <View>
-                      <Text className="text-[11px] font-extrabold text-[#04252D] uppercase">
+                      <Text className="text-[11px] font-extrabold text-[#173F73] uppercase">
                         Code OTP Test Dev :
                       </Text>
-                      <Text className="text-lg font-black tracking-widest text-[#04252D]">
+                      <Text className="text-lg font-black tracking-widest text-[#173F73]">
                         {devOtpCode}
                       </Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => setOtpCode(devOtpCode)}
-                      className="px-3.5 py-1.5 bg-[#D8C911] rounded-xl"
+                      className="px-3.5 py-1.5 bg-[#19A66A] rounded-xl"
                     >
-                      <Text className="text-xs font-extrabold text-[#04252D]">Remplir</Text>
+                      <Text className="text-xs font-extrabold text-[#173F73]">Remplir</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -306,7 +306,7 @@ export default function LoginScreen() {
                   className="w-full bg-brand-dark active:bg-brand-darkCard py-4 rounded-2xl items-center justify-center mt-4 shadow-md shadow-black/20 border border-brand-primary/30"
                 >
                   {verifyOtpMutation.isPending ? (
-                    <ActivityIndicator color="#D8C911" />
+                    <ActivityIndicator color="#19A66A" />
                   ) : (
                     <Text className="text-base font-black text-brand-primary uppercase tracking-wider">
                       VALIDER ET CONTINUER
@@ -319,7 +319,7 @@ export default function LoginScreen() {
                   onPress={() => setStep('phone')}
                   className="mt-4 py-2 items-center"
                 >
-                  <Text className="text-xs font-extrabold text-[#04252D]">
+                  <Text className="text-xs font-extrabold text-[#173F73]">
                     Modifier le numéro de téléphone
                   </Text>
                 </TouchableOpacity>

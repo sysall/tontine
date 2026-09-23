@@ -157,12 +157,12 @@ export default function MyTontinesScreen() {
             onPress={() => setStatusFilter('active')}
             activeOpacity={0.8}
             className={`flex-1 py-2.5 px-1 rounded-2xl border items-center ${statusFilter === 'active'
-              ? 'bg-[#04252D] border-[#04252D] shadow-sm'
+              ? 'bg-[#173F73] border-[#173F73] shadow-sm'
               : 'bg-white border-gray-200'
               }`}
           >
             <Text
-              className={`text-xs font-black ${statusFilter === 'active' ? 'text-[#D8C911]' : 'text-gray-600'
+              className={`text-xs font-black ${statusFilter === 'active' ? 'text-[#19A66A]' : 'text-gray-600'
                 }`}
             >
               Actif ({activeCount})
@@ -174,12 +174,12 @@ export default function MyTontinesScreen() {
             onPress={() => setStatusFilter('pending')}
             activeOpacity={0.8}
             className={`flex-1 py-2.5 px-1 rounded-2xl border items-center ${statusFilter === 'pending'
-              ? 'bg-[#04252D] border-[#04252D] shadow-sm'
+              ? 'bg-[#173F73] border-[#173F73] shadow-sm'
               : 'bg-white border-gray-200'
               }`}
           >
             <Text
-              className={`text-xs font-black ${statusFilter === 'pending' ? 'text-[#D8C911]' : 'text-gray-600'
+              className={`text-xs font-black ${statusFilter === 'pending' ? 'text-[#19A66A]' : 'text-gray-600'
                 }`}
             >
               En attente ({pendingCount})
@@ -191,12 +191,12 @@ export default function MyTontinesScreen() {
             onPress={() => setStatusFilter('completed')}
             activeOpacity={0.8}
             className={`flex-1 py-2.5 px-1 rounded-2xl border items-center ${statusFilter === 'completed'
-              ? 'bg-[#04252D] border-[#04252D] shadow-sm'
+              ? 'bg-[#173F73] border-[#173F73] shadow-sm'
               : 'bg-white border-gray-200'
               }`}
           >
             <Text
-              className={`text-xs font-black ${statusFilter === 'completed' ? 'text-[#D8C911]' : 'text-gray-600'
+              className={`text-xs font-black ${statusFilter === 'completed' ? 'text-[#19A66A]' : 'text-gray-600'
                 }`}
             >
               Terminé ({completedCount})
@@ -207,15 +207,15 @@ export default function MyTontinesScreen() {
         {/* ==================== TONTINE LIST BY FILTER ==================== */}
         {isLoading ? (
           <View className="py-12 items-center">
-            <ActivityIndicator size="large" color="#D8C911" />
+            <ActivityIndicator size="large" color="#19A66A" />
             <Text className="text-xs font-semibold text-gray-500 mt-3">
               Chargement de vos tontines en cours...
             </Text>
           </View>
         ) : filteredTontines.length === 0 ? (
           <View className="bg-white rounded-3xl p-8 items-center border border-gray-100 mt-4 shadow-sm">
-            <View className="w-16 h-16 rounded-full bg-[#FAF8D6] items-center justify-center mb-4 border border-[#D8C911]">
-              <TontineIcon size={32} color="#04252D" focused />
+            <View className="w-16 h-16 rounded-full bg-[#D4F2E4] items-center justify-center mb-4 border border-[#19A66A]">
+              <TontineIcon size={32} color="#173F73" focused />
             </View>
             <Text className="text-lg font-black text-brand-dark text-center mb-2">
               {statusFilter === 'active'
@@ -349,9 +349,9 @@ export default function MyTontinesScreen() {
                       );
                     }}
                     activeOpacity={0.85}
-                    className="px-5 py-3 bg-[#04252D] active:bg-[#0A333D] rounded-2xl shadow-sm border border-[#D8C911]/30"
+                    className="px-5 py-3 bg-[#173F73] active:bg-[#1A4A82] rounded-2xl shadow-sm border border-[#19A66A]/30"
                   >
-                    <Text className="text-xs font-black text-[#D8C911] uppercase tracking-wider">RÉGLES</Text>
+                    <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">RÉGLES</Text>
                   </TouchableOpacity>
                 )}
 

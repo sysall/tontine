@@ -31,7 +31,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div style={{
       minHeight: '100vh',
       width: '100vw',
-      background: 'radial-gradient(circle at 50% 20%, #0a3a46 0%, #04252D 70%)',
+      background: 'radial-gradient(circle at 50% 20%, #1E5590 0%, #173F73 70%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -48,19 +48,19 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         width: '600px',
         height: '600px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(216, 201, 17, 0.15) 0%, rgba(4, 37, 45, 0) 70%)',
+        background: 'radial-gradient(circle, rgba(25, 166, 106, 0.2) 0%, rgba(23, 63, 115, 0) 70%)',
         pointerEvents: 'none'
       }} />
 
       <div style={{
         width: '100%',
         maxWidth: '440px',
-        background: 'rgba(10, 51, 61, 0.85)',
+        background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(216, 201, 17, 0.3)',
+        border: '1px solid rgba(25, 166, 106, 0.3)',
         borderRadius: '24px',
         padding: '2.5rem',
-        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6)',
+        boxShadow: '0 25px 60px rgba(23, 63, 115, 0.35)',
         position: 'relative',
         zIndex: 10
       }}>
@@ -70,28 +70,28 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             width: '64px',
             height: '64px',
             borderRadius: '20px',
-            background: '#D8C911',
+            background: '#19A66A',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1.25rem auto',
-            boxShadow: '0 8px 24px rgba(216, 201, 17, 0.4)'
+            boxShadow: '0 8px 24px rgba(25, 166, 106, 0.4)'
           }}>
-            <Zap size={36} color="#04252D" />
+            <Zap size={36} color="#FFFFFF" />
           </div>
 
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#F8FAF7' }}>
-            TONTINE <span style={{ color: '#D8C911' }}>EXPRESS</span>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#173F73' }}>
+            TONTINE <span style={{ color: '#19A66A' }}>EXPRESS</span>
           </h1>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.25rem' }}>
+          <div style={{ fontSize: '0.8rem', color: '#5A6B80', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.25rem' }}>
             Portail Administration & Trésorerie
           </div>
         </div>
 
         {/* Security Alert Badge */}
         <div style={{
-          background: 'rgba(216, 201, 17, 0.08)',
-          border: '1px solid rgba(216, 201, 17, 0.25)',
+          background: 'rgba(25, 166, 106, 0.08)',
+          border: '1px solid rgba(25, 166, 106, 0.25)',
           borderRadius: '12px',
           padding: '0.75rem 1rem',
           marginBottom: '1.75rem',
@@ -99,7 +99,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           alignItems: 'center',
           gap: '0.6rem',
           fontSize: '0.75rem',
-          color: '#D8C911'
+          color: '#19A66A'
         }}>
           <ShieldCheck size={18} style={{ flexShrink: 0 }} />
           <span>Accès sécurisé réservé à l'équipe de gestion Tontine Express SN.</span>
@@ -107,13 +107,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         {errorMsg && (
           <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
             borderRadius: '10px',
             padding: '0.75rem',
             marginBottom: '1.25rem',
             fontSize: '0.8rem',
-            color: '#f87171',
+            color: '#ef4444',
             textAlign: 'center'
           }}>
             {errorMsg}
@@ -125,7 +125,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <div className="form-group">
             <label className="form-label">Identifiant Administrateur</label>
             <div style={{ position: 'relative' }}>
-              <Mail size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+              <Mail size={18} color="#5A6B80" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
                 type="email"
                 className="form-input"
@@ -142,10 +142,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label className="form-label">Mot de passe</label>
-              <span style={{ fontSize: '0.75rem', color: '#D8C911', cursor: 'pointer' }}>Mot de passe oublié ?</span>
+              <span style={{ fontSize: '0.75rem', color: '#19A66A', cursor: 'pointer' }}>Mot de passe oublié ?</span>
             </div>
             <div style={{ position: 'relative' }}>
-              <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+              <Lock size={18} color="#5A6B80" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
                 type={showPassword ? 'text' : 'password'}
                 className="form-input"
@@ -158,7 +158,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <button 
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#5A6B80', cursor: 'pointer' }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -167,11 +167,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           {/* Remember me & Demo Note */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', fontSize: '0.8rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
-              <input type="checkbox" defaultChecked style={{ accentColor: '#D8C911' }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#5A6B80' }}>
+              <input type="checkbox" defaultChecked style={{ accentColor: '#19A66A' }} />
               <span>Rester connecté</span>
             </label>
-            <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>Démo: admin123</span>
+            <span style={{ color: '#8A9AAA', fontSize: '0.75rem' }}>Démo: admin123</span>
           </div>
 
           {/* Submit Button */}
@@ -193,7 +193,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         </form>
 
         {/* Footer Note */}
-        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-dim)', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.75rem', color: '#8A9AAA', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
           Tontine Express SN © 2026 — Trésorerie Centralisée
         </div>
       </div>

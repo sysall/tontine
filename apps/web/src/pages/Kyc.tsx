@@ -35,7 +35,7 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldCheck color="#D8C911" />
+              <ShieldCheck color="#19A66A" />
               <span>Vérification KYC & Double Checking OCR</span>
             </h2>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
@@ -57,13 +57,13 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
         <div 
           className={`glass-card glass-card-interactive ${filterStatus === 'PENDING' ? 'selected' : ''}`}
           onClick={() => setFilterStatus('PENDING')}
-          style={{ borderColor: filterStatus === 'PENDING' ? '#D8C911' : 'var(--border-color)', background: 'rgba(216, 201, 17, 0.08)' }}
+          style={{ borderColor: filterStatus === 'PENDING' ? '#19A66A' : 'var(--border-color)', background: 'rgba(25, 166, 106, 0.06)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>En Attente Double Check</span>
-            <AlertTriangle size={20} color="#D8C911" />
+            <AlertTriangle size={20} color="#D9A33A" />
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#D8C911', marginTop: '0.25rem' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#19A66A', marginTop: '0.25rem' }}>
             {pendingCount}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>OCR inconcluant ou incomplet</div>
@@ -72,13 +72,13 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
         <div 
           className={`glass-card glass-card-interactive ${filterStatus === 'VERIFIED' ? 'selected' : ''}`}
           onClick={() => setFilterStatus('VERIFIED')}
-          style={{ borderColor: filterStatus === 'VERIFIED' ? '#10B981' : 'var(--border-color)' }}
+          style={{ borderColor: filterStatus === 'VERIFIED' ? '#19A66A' : 'var(--border-color)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Comptes Valides</span>
-            <CheckCircle2 size={20} color="#10B981" />
+            <CheckCircle2 size={20} color="#19A66A" />
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#34d399', marginTop: '0.25rem' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#19A66A', marginTop: '0.25rem' }}>
             {verifiedCount}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Approuvés par OCR ou Admin</div>
@@ -114,7 +114,7 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(4, 37, 45, 0.7)', padding: '0.35rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(23, 63, 115, 0.04)', padding: '0.35rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
           <button 
             className={`btn btn-sm ${filterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setFilterStatus('ALL')}
@@ -165,7 +165,7 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
                         <span className="badge badge-gray">{record.documentType}</span>
                       </td>
                       <td>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#D8C911' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#19A66A' }}>
                           {record.extractedNin}
                         </span>
                       </td>

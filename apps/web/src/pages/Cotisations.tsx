@@ -43,7 +43,7 @@ export const Cotisations: React.FC<CotisationsProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ArrowDownRight color="#D8C911" />
+              <ArrowDownRight color="#19A66A" />
               <span>Suivi des Cotisations & Retards de Paiement</span>
             </h2>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
@@ -51,7 +51,7 @@ export const Cotisations: React.FC<CotisationsProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(4, 37, 45, 0.7)', padding: '0.35rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(23, 63, 115, 0.04)', padding: '0.35rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
             <button 
               className={`btn btn-sm ${activeTab === 'deposits' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setActiveTab('deposits')}
@@ -165,7 +165,7 @@ export const Cotisations: React.FC<CotisationsProps> = ({
                       <span style={{ fontWeight: 600 }}>{tx.nattTitle}</span>
                     </td>
                     <td>
-                      <span style={{ fontSize: '1rem', fontWeight: 800, color: '#10B981' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color: '#19A66A' }}>
                         +{tx.amountFcfa.toLocaleString('fr-FR')} FCFA
                       </span>
                     </td>

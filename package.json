@@ -5,13 +5,15 @@
   "description": "Monorepo Tontine Express - Mobile App & Unified NestJS API",
   "workspaces": [
     "apps/*",
-    "services/*"
+    "services/*",
+    "packages/*"
   ],
   "scripts": {
     "dev:api": "npm run start:dev --workspace=services/api",
     "dev:mobile": "npm run start --workspace=apps/mobile",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev": "npm run dev:api",
+    "seed": "npx tsx scripts/seed-data.ts",
     "db:push": "npm run prisma:push --workspace=services/api",
     "db:generate": "npm run prisma:generate --workspace=services/api",
     "docker:up": "docker compose up -d --build",

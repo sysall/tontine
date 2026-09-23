@@ -44,7 +44,7 @@ export const Versements: React.FC<VersementsProps> = ({
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(9, 13, 22, 0.6)', padding: '0.35rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(23, 63, 115, 0.04)', padding: '0.35rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
             <button 
               className={`btn btn-sm ${activeTab === 'pending' ? 'btn-gold' : 'btn-secondary'}`}
               onClick={() => setActiveTab('pending')}
@@ -89,7 +89,7 @@ export const Versements: React.FC<VersementsProps> = ({
 
           {filteredQueue.length === 0 ? (
             <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <CheckCircle2 size={48} color="#10b981" style={{ margin: '0 auto 1rem auto' }} />
+              <CheckCircle2 size={48} color="#19A66A" style={{ margin: '0 auto 1rem auto' }} />
               <div style={{ fontWeight: 700, fontSize: '1rem' }}>Tous les versements éligibles ont été traités !</div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
                 Aucun client n'est actuellement en attente de déblocage 70%.
@@ -125,7 +125,7 @@ export const Versements: React.FC<VersementsProps> = ({
                         </span>
                       </td>
                       <td>
-                        <span style={{ fontWeight: 700, color: '#34d399' }}>
+                        <span style={{ fontWeight: 700, color: '#19A66A' }}>
                           {sub.contributedAmountFcfa.toLocaleString('fr-FR')} FCFA
                         </span>
                       </td>
@@ -176,7 +176,7 @@ export const Versements: React.FC<VersementsProps> = ({
                 {filteredHistory.map((rec) => (
                   <tr key={rec.id}>
                     <td>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#fbbf24', fontSize: '0.8rem' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#D9A33A', fontSize: '0.8rem' }}>
                         {rec.reference}
                       </span>
                     </td>
@@ -186,7 +186,7 @@ export const Versements: React.FC<VersementsProps> = ({
                     </td>
                     <td>{rec.nattTitle}</td>
                     <td>
-                      <span style={{ fontWeight: 800, color: '#34d399', fontSize: '0.95rem' }}>
+                      <span style={{ fontWeight: 800, color: '#19A66A', fontSize: '0.95rem' }}>
                         {rec.payoutAmountFcfa.toLocaleString('fr-FR')} FCFA
                       </span>
                     </td>

@@ -31,6 +31,7 @@ export default function RootLayout() {
           <Stack.Screen name="login" />
           <Stack.Screen name="dashboard" />
           <Stack.Screen name="my-tontines" />
+          <Stack.Screen name="natt-recap" />
           <Stack.Screen name="contribute" />
           <Stack.Screen name="profile" />
         </Stack>

@@ -180,19 +180,19 @@ export default function ProfileScreen() {
       <ScrollView className="flex-1 px-5 pt-4 pb-8" showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
         <View className="bg-white rounded-3xl p-6 mb-5 shadow-sm border border-gray-100 items-center">
-          <View className="w-20 h-20 rounded-full bg-[#04252D] items-center justify-center mb-3 shadow-md border-2 border-[#D8C911]">
-            <UserIcon size={38} color="#D8C911" focused />
+          <View className="w-20 h-20 rounded-full bg-[#173F73] items-center justify-center mb-3 shadow-md border-2 border-[#19A66A]">
+            <UserIcon size={38} color="#19A66A" focused />
           </View>
           <Text className="text-xl font-black text-brand-dark">
             {user?.fullName || 'Fatou Sow'}
           </Text>
-          <Text className="text-sm font-extrabold text-[#04252D] mt-0.5">
+          <Text className="text-sm font-extrabold text-[#173F73] mt-0.5">
             {user?.phoneNumber || '+221 77 123 45 67'}
           </Text>
 
-          <View className="mt-4 px-4 py-1.5 bg-[#FAF8D6] rounded-full border border-[#D8C911] flex-row items-center space-x-1.5">
-            <ShieldCheckIcon size={14} color="#04252D" />
-            <Text className="text-xs font-black text-[#04252D]">
+          <View className="mt-4 px-4 py-1.5 bg-[#D4F2E4] rounded-full border border-[#19A66A] flex-row items-center space-x-1.5">
+            <ShieldCheckIcon size={14} color="#173F73" />
+            <Text className="text-xs font-black text-[#173F73]">
               Membre Vérifié BCEAO
             </Text>
           </View>
@@ -204,9 +204,9 @@ export default function ProfileScreen() {
             Moyen de Paiement pour Retraits & Versements
           </Text>
 
-          <View className="flex-row items-center justify-between p-3.5 bg-[#FAF8D6]/80 rounded-2xl border border-[#D8C911] mb-3">
+          <View className="flex-row items-center justify-between p-3.5 bg-[#D4F2E4]/80 rounded-2xl border border-[#19A66A] mb-3">
             <View className="flex-row items-center space-x-3">
-              <SmartphoneIcon size={22} color="#04252D" />
+              <SmartphoneIcon size={22} color="#173F73" />
               <View>
                 <Text className="text-sm font-extrabold text-brand-dark">
                   {activePaymentProvider === 'wave' ? 'Wave Sénégal' : 'Orange Money'}
@@ -216,16 +216,16 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             </View>
-            <View className="px-2.5 py-1 bg-[#D8C911] rounded-full">
-              <Text className="text-[10px] font-extrabold text-[#04252D] uppercase">Actif</Text>
+            <View className="px-2.5 py-1 bg-[#19A66A] rounded-full">
+              <Text className="text-[10px] font-extrabold text-[#173F73] uppercase">Actif</Text>
             </View>
           </View>
 
           <TouchableOpacity
             onPress={() => setIsPaymentModalOpen(true)}
-            className="w-full bg-[#04252D] active:bg-[#0A333D] py-3.5 rounded-2xl items-center shadow-md shadow-black/20 border border-[#D8C911]/30"
+            className="w-full bg-[#173F73] active:bg-[#1A4A82] py-3.5 rounded-2xl items-center shadow-md shadow-black/20 border border-[#19A66A]/30"
           >
-            <Text className="text-xs font-black text-[#D8C911] uppercase tracking-wider">
+            <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
               Configurer mon moyen de paiement
             </Text>
           </TouchableOpacity>
@@ -239,8 +239,8 @@ export default function ProfileScreen() {
             className="p-4 border-b border-gray-100 flex-row justify-between items-center"
           >
             <View className="flex-row items-center space-x-3">
-              <View className="w-9 h-9 rounded-xl bg-[#FAF8D6] items-center justify-center border border-[#D8C911]">
-                <ShieldCheckIcon size={18} color="#04252D" />
+              <View className="w-9 h-9 rounded-xl bg-[#D4F2E4] items-center justify-center border border-[#19A66A]">
+                <ShieldCheckIcon size={18} color="#173F73" />
               </View>
               <View>
                 <Text className="text-sm font-extrabold text-brand-dark">
@@ -260,8 +260,8 @@ export default function ProfileScreen() {
             className="p-4 border-b border-gray-100 flex-row justify-between items-center"
           >
             <View className="flex-row items-center space-x-3">
-              <View className="w-9 h-9 rounded-xl bg-[#FAF8D6] items-center justify-center border border-[#D8C911]">
-                <JoinIcon size={18} color="#04252D" />
+              <View className="w-9 h-9 rounded-xl bg-[#D4F2E4] items-center justify-center border border-[#19A66A]">
+                <JoinIcon size={18} color="#173F73" />
               </View>
               <View className="flex-1 pr-2">
                 <Text className="text-sm font-extrabold text-brand-dark">
@@ -280,7 +280,7 @@ export default function ProfileScreen() {
           >
             <View className="flex-row items-center space-x-3">
               <View className="w-9 h-9 rounded-xl bg-slate-100 items-center justify-center border border-slate-200">
-                <WhatsAppIcon size={18} color="#04252D" />
+                <WhatsAppIcon size={18} color="#173F73" />
               </View>
               <View className="flex-1 pr-2">
                 <Text className="text-sm font-extrabold text-brand-dark">
@@ -299,7 +299,7 @@ export default function ProfileScreen() {
           >
             <View className="flex-row items-center space-x-3">
               <View className="w-9 h-9 rounded-xl bg-slate-100 items-center justify-center border border-slate-200">
-                <ShieldCheckIcon size={18} color="#04252D" />
+                <ShieldCheckIcon size={18} color="#173F73" />
               </View>
               <View className="flex-1 pr-2">
                 <Text className="text-sm font-extrabold text-brand-dark">
@@ -512,9 +512,9 @@ export default function ProfileScreen() {
             <TouchableOpacity
               onPress={handleChangePinSubmit}
               activeOpacity={0.85}
-              className="w-full bg-[#04252D] active:bg-[#0A333D] py-4 rounded-2xl items-center shadow-md border border-[#D8C911]/30"
+              className="w-full bg-[#173F73] active:bg-[#1A4A82] py-4 rounded-2xl items-center shadow-md border border-[#19A66A]/30"
             >
-              <Text className="text-xs font-black text-[#D8C911] uppercase tracking-wider">
+              <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
                 ENREGISTRER LE NOUVEAU CODE SECRET
               </Text>
             </TouchableOpacity>

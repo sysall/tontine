@@ -133,7 +133,7 @@ export const LogOutIcon: React.FC<IconProps> = ({ size = 24, color = '#DC2626' }
 );
 
 // 💰 Wallet / Savings Icon
-export const WalletIcon: React.FC<IconProps> = ({ size = 24, color = '#04252D' }) => (
+export const WalletIcon: React.FC<IconProps> = ({ size = 24, color = '#173F73' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Rect
       x="2"
@@ -271,7 +271,7 @@ export const SparklesIcon: React.FC<IconProps> = ({ size = 22, color = '#1A1A1A'
 );
 
 // ↙️ Arrow Down Left (Payout / Incoming Money)
-export const ArrowDownLeftIcon: React.FC<IconProps> = ({ size = 20, color = '#10B981' }) => (
+export const ArrowDownLeftIcon: React.FC<IconProps> = ({ size = 20, color = '#19A66A' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M17 7L7 17M7 17H17M7 17V7"
@@ -284,7 +284,7 @@ export const ArrowDownLeftIcon: React.FC<IconProps> = ({ size = 20, color = '#10
 );
 
 // ↗️ Arrow Up Right (Contribution / Outgoing Money)
-export const ArrowUpRightIcon: React.FC<IconProps> = ({ size = 20, color = '#F59E0B' }) => (
+export const ArrowUpRightIcon: React.FC<IconProps> = ({ size = 20, color = '#D9A33A' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M7 17L17 7M17 7H7M17 7V17"

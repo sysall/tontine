@@ -26,7 +26,7 @@ export const Natts: React.FC<NattsProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PiggyBank color="#D8C911" />
+              <PiggyBank color="#19A66A" />
               <span>Les 3 Systèmes d'Épargne & Offres Natts</span>
             </h2>
 
@@ -56,7 +56,7 @@ export const Natts: React.FC<NattsProps> = ({
               Formule d'épargne périodique classique avec montants fixes ajustables. Conçue pour une épargne régulière en toute sérénité.
             </p>
 
-            <div style={{ background: 'rgba(4, 37, 45, 0.7)', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
+            <div style={{ background: 'rgba(23, 63, 115, 0.04)', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Montants Cibles :</span>
                 <span style={{ fontWeight: 700 }}>250k FCFA - 3M FCFA</span>
@@ -67,7 +67,7 @@ export const Natts: React.FC<NattsProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Déblocage Versement :</span>
-                <span style={{ fontWeight: 800, color: '#D8C911' }}>Dès 70% cotisé</span>
+                <span style={{ fontWeight: 800, color: '#19A66A' }}>Dès 70% cotisé</span>
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@ export const Natts: React.FC<NattsProps> = ({
               Offre d'épargne progressive rapide (journalière ou hebdomadaire) permettant aux commerçants et entrepreneurs de concrétiser un projet.
             </p>
 
-            <div style={{ background: 'rgba(4, 37, 45, 0.7)', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
+            <div style={{ background: 'rgba(23, 63, 115, 0.04)', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Montants Cibles :</span>
                 <span style={{ fontWeight: 700 }}>100k FCFA - 3M FCFA</span>
@@ -104,7 +104,7 @@ export const Natts: React.FC<NattsProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Déblocage Versement :</span>
-                <span style={{ fontWeight: 800, color: '#D8C911' }}>Dès 70% cotisé</span>
+                <span style={{ fontWeight: 800, color: '#19A66A' }}>Dès 70% cotisé</span>
               </div>
             </div>
           </div>
@@ -140,7 +140,7 @@ export const Natts: React.FC<NattsProps> = ({
             <div
               key={evt.id}
               style={{
-                background: 'rgba(4, 37, 45, 0.7)',
+                background: 'rgba(23, 63, 115, 0.04)',
                 border: '1px solid var(--border-color)',
                 borderRadius: '14px',
                 padding: '1.25rem',
@@ -192,11 +192,11 @@ export const Natts: React.FC<NattsProps> = ({
                 <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px', padding: '0.75rem', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Échéance :</span>
-                    <span style={{ fontWeight: 700, color: '#10B981' }}>{evt.eventDate}</span>
+                    <span style={{ fontWeight: 700, color: '#19A66A' }}>{evt.eventDate}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Montant Cible Recommandé :</span>
-                    <span style={{ fontWeight: 800, color: '#D8C911' }}>{evt.targetAmountFcfa.toLocaleString('fr-FR')} FCFA</span>
+                    <span style={{ fontWeight: 800, color: '#D9A33A' }}>{evt.targetAmountFcfa.toLocaleString('fr-FR')} FCFA</span>
                   </div>
                 </div>
               </div>

@@ -32,7 +32,7 @@ export const Clients: React.FC<ClientsProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Users color="#D8C911" />
+            <Users color="#19A66A" />
             <span>Répertoire & Portefeuille des Clients</span>
           </h2>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -72,8 +72,8 @@ export const Clients: React.FC<ClientsProps> = ({
                   onClick={() => setSelectedClientId(cli.id)}
                   style={{
                     padding: '1rem',
-                    background: isSelected ? 'rgba(216, 201, 17, 0.15)' : 'rgba(4, 37, 45, 0.6)',
-                    borderColor: isSelected ? 'var(--brand-yellow)' : 'var(--border-color)',
+                    background: isSelected ? 'rgba(25, 166, 106, 0.1)' : 'rgba(23, 63, 115, 0.03)',
+                    borderColor: isSelected ? 'var(--brand-green)' : 'var(--border-color)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -91,7 +91,7 @@ export const Clients: React.FC<ClientsProps> = ({
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>{cli.activeNattsCount} Natt(s) actif(s)</span>
-                    <span style={{ fontWeight: 800, color: '#D8C911' }}>
+                    <span style={{ fontWeight: 800, color: '#19A66A' }}>
                       {cli.totalContributedFcfa.toLocaleString('fr-FR')} FCFA cotisé
                     </span>
                   </div>
@@ -133,7 +133,7 @@ export const Clients: React.FC<ClientsProps> = ({
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {selectedClientSubs.map((sub) => (
-                    <div key={sub.id} style={{ background: 'rgba(4, 37, 45, 0.7)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.25rem' }}>
+                    <div key={sub.id} style={{ background: 'rgba(23, 63, 115, 0.04)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.25rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                         <div>
                           <div style={{ fontWeight: 800, fontSize: '1rem' }}>{sub.categoryTitle}</div>
@@ -162,11 +162,11 @@ export const Clients: React.FC<ClientsProps> = ({
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', padding: '0.75rem', borderRadius: '10px', fontSize: '0.8rem' }}>
                         <div>
                           <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Montant Total Natt</div>
-                          <div style={{ fontWeight: 800, color: '#D8C911' }}>{sub.targetAmountFcfa.toLocaleString('fr-FR')} FCFA</div>
+                          <div style={{ fontWeight: 800, color: '#19A66A' }}>{sub.targetAmountFcfa.toLocaleString('fr-FR')} FCFA</div>
                         </div>
                         <div>
                           <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Cotisé Actuellement</div>
-                          <div style={{ fontWeight: 800, color: '#34d399' }}>{sub.contributedAmountFcfa.toLocaleString('fr-FR')} FCFA</div>
+                          <div style={{ fontWeight: 800, color: '#D9A33A' }}>{sub.contributedAmountFcfa.toLocaleString('fr-FR')} FCFA</div>
                         </div>
                         <div>
                           <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Seuil Versement (70%)</div>

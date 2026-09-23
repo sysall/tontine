@@ -165,7 +165,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </button>
                       ) : sub.status === 'PAID_OUT' ? (
                         <span className="badge badge-gray">
-                          <CheckCircle2 size={12} color="#10b981" />
+                          <CheckCircle2 size={12} color="#19A66A" />
                           <span>Versé (100%)</span>
                         </span>
                       ) : (
@@ -190,7 +190,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* System 1 */}
-            <div style={{ background: 'rgba(9, 13, 22, 0.6)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem' }}>
+            <div style={{ background: 'rgba(23, 63, 115, 0.04)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#60a5fa' }}>🔄 Natt Classique</span>
                 <span className="badge badge-blue">Fixe Mensuel</span>
@@ -272,7 +272,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </td>
                   <td>{tx.nattTitle}</td>
                   <td>
-                    <span style={{ color: '#34d399', fontWeight: 800 }}>
+                    <span style={{ color: '#19A66A', fontWeight: 800 }}>
                       +{tx.amountFcfa.toLocaleString('fr-FR')} FCFA
                     </span>
                   </td>

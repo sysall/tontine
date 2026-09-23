@@ -9,9 +9,11 @@ import {
   TextInput,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { TontineLogo } from '../components/TontineLogo';
 import {
   HomeIcon,
@@ -103,48 +105,55 @@ export default function DashboardScreen() {
       return;
     }
 
-    subscribeOfferMutation.mutate(
-      {
-        offerType: selectedOfferModal.type,
-        tierId: selectedTier.id,
-        amountFcfa: selectedTier.amountFcfa,
+    const offerTitle = selectedOfferModal.title;
+    const offerType = selectedOfferModal.type;
+    const tierId = selectedTier.id;
+    const amountFcfa = selectedTier.amountFcfa;
+    const frequency = selectedTier.frequency || 'Mensuel';
+
+    setSelectedOfferModal(null);
+    setSelectedTier(null);
+
+    router.push({
+      pathname: '/natt-recap',
+      params: {
+        offerTitle,
+        offerType,
+        tierId,
+        amountFcfa: amountFcfa.toString(),
+        frequency,
+        category: 'PERMANENT',
       },
-      {
-        onSuccess: (res) => {
-          const offerTitle = selectedOfferModal.title;
-          setSelectedOfferModal(null);
-          setSelectedTier(null);
-          Alert.alert(
-            'Félicitations !',
-            `Votre souscription à la ${offerTitle} (${selectedTier.name}) est enregistrée.\n\nCode d'invitation généré pour vos proches : ${res.subscription.inviteCode}`
-          );
-        },
-        onError: (err) => {
-          Alert.alert('Erreur', err.message || 'Échec de la souscription');
-        },
-      }
-    );
+    });
   };
 
   const handleJoinSubmit = () => {
     const eventLabels: Record<string, string> = {
-      noel: 'Noël',
-      tabaski: 'Tabaski',
-      magal: 'Magal',
+      noel: 'Natt Événement — Noël & Fêtes',
+      tabaski: 'Opération Tabaski 2026',
+      magal: 'Magal de Touba 2026',
     };
 
-    joinTontineMutation.mutate(
-      { inviteCode: selectedEventOption.toUpperCase() },
-      {
-        onSuccess: (res) => {
-          setIsJoinModalOpen(false);
-          Alert.alert('Natt Événement Rejoint !', `Vous avez rejoint le Natt Événement (${eventLabels[selectedEventOption]}) avec succès.`);
-        },
-        onError: (err) => {
-          Alert.alert('Erreur', err.message || 'Échec du recrutement dans l\'événement');
-        },
-      }
-    );
+    const eventAmounts: Record<string, number> = {
+      noel: 250000,
+      tabaski: 300000,
+      magal: 500000,
+    };
+
+    const eventTitle = eventLabels[selectedEventOption] || 'Natt Événement';
+    const amountFcfa = eventAmounts[selectedEventOption] || 300000;
+
+    setIsJoinModalOpen(false);
+
+    router.push({
+      pathname: '/natt-recap',
+      params: {
+        offerTitle: eventTitle,
+        amountFcfa: amountFcfa.toString(),
+        frequency: 'Mensuelle',
+        category: 'EVENT',
+      },
+    });
   };
 
   const handleKycSubmit = () => {
@@ -221,128 +230,162 @@ export default function DashboardScreen() {
         </View>
 
         {/* Official Brand Hero Balance Card */}
-        <View className="mt-5 bg-[#04252D] rounded-3xl p-6 shadow-xl shadow-black/30 border border-[#D8C911]/30">
-          <View className="flex-row justify-between items-start">
-            <View>
-              <Text className="text-xs uppercase tracking-widest text-[#D8C911] font-extrabold mb-1">
-                Mon Épargne Totale Cotisée
-              </Text>
-              <Text className="text-3xl font-black text-white tracking-tight">
-                {summary.totalSavedFcfa.toLocaleString('fr-FR')} <Text className="text-[#D8C911] text-xl font-black">FCFA</Text>
-              </Text>
+        <View className="mt-5 shadow-xl shadow-[#0E284A]/40 rounded-[24px] bg-[#0E284A]">
+          <LinearGradient
+            colors={['#1E4D8C', '#173F73', '#0E284A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: 24,
+              padding: 22,
+              borderWidth: 1,
+              borderColor: 'rgba(25, 166, 106, 0.35)',
+              overflow: 'hidden',
+            }}
+          >
+            <View className="flex-row justify-between items-start">
+              <View>
+                <Text className="text-xs uppercase tracking-widest text-[#19A66A] font-extrabold mb-1">
+                  Mon Épargne Totale Cotisée
+                </Text>
+                <Text className="text-3xl font-black text-white tracking-tight">
+                  {summary.totalSavedFcfa.toLocaleString('fr-FR')} <Text className="text-[#19A66A] text-xl font-black">FCFA</Text>
+                </Text>
+              </View>
+              <View className="w-10 h-10 rounded-2xl bg-[#19A66A]/20 items-center justify-center border border-[#19A66A]/40">
+                <WalletIcon size={22} color="#19A66A" />
+              </View>
             </View>
-            <View className="w-10 h-10 rounded-2xl bg-[#D8C911]/20 items-center justify-center border border-[#D8C911]/40">
-              <WalletIcon size={22} color="#D8C911" />
-            </View>
-          </View>
 
-          <View className="mt-6 pt-4 border-t border-slate-700/60 flex-row justify-between">
-            <View>
-              <Text className="text-[11px] text-gray-300 uppercase font-semibold">Prochain Versement</Text>
-              <Text className="text-sm font-black text-[#D8C911]">
-                {summary.nextPaymentFcfa.toLocaleString('fr-FR')} FCFA
-              </Text>
-              <Text className="text-[10px] text-gray-400">Échéance: 25 Août</Text>
+            <View className="mt-6 pt-4 border-t border-white/10 flex-row justify-between">
+              <View>
+                <Text className="text-[11px] text-gray-300 uppercase font-semibold">Prochain Versement</Text>
+                <Text className="text-sm font-black text-[#19A66A]">
+                  {summary.nextPaymentFcfa.toLocaleString('fr-FR')} FCFA
+                </Text>
+                <Text className="text-[10px] text-gray-300/80">Échéance: 25 Août</Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-[11px] text-gray-300 uppercase font-semibold">Gain Attendu</Text>
+                <Text className="text-sm font-black text-white">
+                  {summary.expectedPayoutFcfa.toLocaleString('fr-FR')} FCFA
+                </Text>
+                <Text className="text-[10px] text-[#19A66A]">Tour #{summary.myPayoutTurn}</Text>
+              </View>
             </View>
-            <View className="items-end">
-              <Text className="text-[11px] text-gray-300 uppercase font-semibold">Gain Attendu</Text>
-              <Text className="text-sm font-black text-white">
-                {summary.expectedPayoutFcfa.toLocaleString('fr-FR')} FCFA
-              </Text>
-              <Text className="text-[10px] text-[#D8C911]">Tour #{summary.myPayoutTurn}</Text>
-            </View>
-          </View>
+          </LinearGradient>
         </View>
 
-        {/* ==================== WAVE-STYLE QUICK ACTIONS GRID (6 BUTTONS) ==================== */}
-        <View className="my-5 bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
-          <Text className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 px-1">
-            Services & Actions Rapides
+        {/* ==================== 3D FINANCIAL ICONS QUICK ACTIONS GRID ==================== */}
+        <View className="my-5 bg-[#FBF9F4] rounded-[28px] p-[20px] border border-[#ECE7DA]">
+          <Text className="text-[16px] font-bold text-[#2B3A2E] mb-[18px]">
+            Services & actions rapides
           </Text>
 
-          {/* Row 1: Direct Formula Shortcuts */}
-          <View className="flex-row justify-around items-center mb-5">
-            {/* 4. Natt Classique */}
+          {/* 3-column Centered Grid with 3D Icons */}
+          <View className="flex-row flex-wrap justify-between" style={{ rowGap: 20 }}>
+            {/* 1. Natt Classique */}
             <TouchableOpacity
               onPress={() => {
                 const offer = OFFICIAL_OFFERS.find((o) => o.id === 'rotative') || OFFICIAL_OFFERS[0];
                 setSelectedOfferModal(offer);
               }}
-              activeOpacity={0.8}
-              className="items-center flex-1"
+              activeOpacity={0.75}
+              style={{ width: '31.5%', alignItems: 'center', justifyContent: 'center' }}
             >
-              <View className="w-14 h-14 rounded-full bg-[#04252D] border border-[#04252D] items-center justify-center mb-1.5 shadow-sm">
-                <CalendarIcon size={22} color="#D8C911" />
-              </View>
-              <Text className="text-xs font-extrabold text-brand-dark text-center">Natt Classique</Text>
+              <Image
+                source={require('../assets/images/3d/natt-classique.png')}
+                style={{ width: 82, height: 82, marginBottom: 6 }}
+                resizeMode="contain"
+              />
+              <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 13, textAlign: 'center', lineHeight: 16, letterSpacing: -0.1 }}>
+                Natt Classique
+              </Text>
             </TouchableOpacity>
 
-            {/* 5. Tekk Tegui */}
+            {/* 2. Tekk Tegui */}
             <TouchableOpacity
               onPress={() => {
                 const offer = OFFICIAL_OFFERS.find((o) => o.id === 'projet') || OFFICIAL_OFFERS[1];
                 setSelectedOfferModal(offer);
               }}
-              activeOpacity={0.8}
-              className="items-center flex-1"
+              activeOpacity={0.75}
+              style={{ width: '31.5%', alignItems: 'center', justifyContent: 'center' }}
             >
-              <View className="w-14 h-14 rounded-full bg-[#04252D] border border-[#04252D] items-center justify-center mb-1.5 shadow-sm">
-                <BoltIcon size={22} color="#D8C911" />
-              </View>
-              <Text className="text-xs font-extrabold text-brand-dark text-center">Tekk Tegui</Text>
+              <Image
+                source={require('../assets/images/3d/tekk-tegui.png')}
+                style={{ width: 82, height: 82, marginBottom: 6 }}
+                resizeMode="contain"
+              />
+              <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 13, textAlign: 'center', lineHeight: 16, letterSpacing: -0.1 }}>
+                Tekk Tegui
+              </Text>
             </TouchableOpacity>
 
-            {/* 6. Natt Événementiel */}
+            {/* 3. Natt Événement */}
             <TouchableOpacity
               onPress={() => setIsJoinModalOpen(true)}
-              activeOpacity={0.8}
-              className="items-center flex-1"
+              activeOpacity={0.75}
+              style={{ width: '31.5%', alignItems: 'center', justifyContent: 'center' }}
             >
-              <View className="w-14 h-14 rounded-full bg-[#04252D] border border-[#04252D] items-center justify-center mb-1.5 shadow-sm">
-                <SparklesIcon size={22} color="#D8C911" />
-              </View>
-              <Text className="text-xs font-extrabold text-brand-dark text-center">Natt Événement</Text>
+              <Image
+                source={require('../assets/images/3d/natt-evenement.png')}
+                style={{ width: 82, height: 82, marginBottom: 6 }}
+                resizeMode="contain"
+              />
+              <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 13, textAlign: 'center', lineHeight: 16, letterSpacing: -0.1 }}>
+                Natt Événement
+              </Text>
             </TouchableOpacity>
-          </View>
-          {/* Row 2: General Navigation */}
-          <View className="flex-row justify-around items-center">
-            {/* 1. Cotiser */}
+
+            {/* 4. Cotiser */}
             <TouchableOpacity
               onPress={() => router.push('/contribute')}
-              activeOpacity={0.8}
-              className="items-center flex-1"
+              activeOpacity={0.75}
+              style={{ width: '31.5%', alignItems: 'center', justifyContent: 'center' }}
             >
-              <View className="w-14 h-14 rounded-full bg-[#FAF8D6] border border-[#D8C911] items-center justify-center mb-1.5 shadow-sm">
-                <WalletIcon size={24} color="#04252D" />
-              </View>
-              <Text className="text-xs font-extrabold text-brand-dark text-center">Cotiser</Text>
+              <Image
+                source={require('../assets/images/3d/cotiser.png')}
+                style={{ width: 82, height: 82, marginBottom: 6 }}
+                resizeMode="contain"
+              />
+              <Text style={{ color: '#0F2F67', fontWeight: '800', fontSize: 13, textAlign: 'center', lineHeight: 16, letterSpacing: -0.1 }}>
+                Cotiser
+              </Text>
             </TouchableOpacity>
 
-            {/* 2. Mes tontines */}
+            {/* 5. Mes tontines */}
             <TouchableOpacity
               onPress={() => router.push('/my-tontines')}
-              activeOpacity={0.8}
-              className="items-center flex-1"
+              activeOpacity={0.75}
+              style={{ width: '31.5%', alignItems: 'center', justifyContent: 'center' }}
             >
-              <View className="w-14 h-14 rounded-full bg-[#FAF8D6] border border-[#D8C911] items-center justify-center mb-1.5 shadow-sm">
-                <TontineIcon size={24} color="#04252D" focused />
-              </View>
-              <Text className="text-xs font-extrabold text-brand-dark text-center">Mes tontines</Text>
+              <Image
+                source={require('../assets/images/3d/mes-tontines.png')}
+                style={{ width: 82, height: 82, marginBottom: 6 }}
+                resizeMode="contain"
+              />
+              <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 13, textAlign: 'center', lineHeight: 16, letterSpacing: -0.1 }}>
+                Mes tontines
+              </Text>
             </TouchableOpacity>
 
-            {/* 3. Paramètres */}
+            {/* 6. Paramètres */}
             <TouchableOpacity
               onPress={() => router.push('/profile')}
-              activeOpacity={0.8}
-              className="items-center flex-1"
+              activeOpacity={0.75}
+              style={{ width: '31.5%', alignItems: 'center', justifyContent: 'center' }}
             >
-              <View className="w-14 h-14 rounded-full bg-slate-100 border border-slate-200 items-center justify-center mb-1.5 shadow-sm">
-                <SettingsIcon size={24} color="#04252D" />
-              </View>
-              <Text className="text-xs font-extrabold text-brand-dark text-center">Paramètres</Text>
+              <Image
+                source={require('../assets/images/3d/parametres.png')}
+                style={{ width: 82, height: 82, marginBottom: 6 }}
+                resizeMode="contain"
+              />
+              <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 13, textAlign: 'center', lineHeight: 16, letterSpacing: -0.1 }}>
+                Paramètres
+              </Text>
             </TouchableOpacity>
           </View>
-
         </View>
 
 
@@ -353,7 +396,7 @@ export default function DashboardScreen() {
               Transactions
             </Text>
             <TouchableOpacity onPress={() => refetchTx()}>
-              <Text className="text-xs font-extrabold text-[#04252D]">Actualiser</Text>
+              <Text className="text-xs font-extrabold text-[#173F73]">Actualiser</Text>
             </TouchableOpacity>
           </View>
 
@@ -362,11 +405,11 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={() => setTxFilter('all')}
               className={`px-3.5 py-1.5 rounded-full border ${txFilter === 'all'
-                ? 'bg-[#04252D] border-[#04252D]'
+                ? 'bg-[#173F73] border-[#173F73]'
                 : 'bg-white border-gray-200'
                 }`}
             >
-              <Text className={`text-xs font-extrabold ${txFilter === 'all' ? 'text-[#D8C911]' : 'text-gray-600'}`}>
+              <Text className={`text-xs font-extrabold ${txFilter === 'all' ? 'text-[#19A66A]' : 'text-gray-600'}`}>
                 Toutes ({rawTransactions.length})
               </Text>
             </TouchableOpacity>
@@ -374,11 +417,11 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={() => setTxFilter('contribution')}
               className={`px-3.5 py-1.5 rounded-full border ${txFilter === 'contribution'
-                ? 'bg-[#04252D] border-[#04252D]'
+                ? 'bg-[#173F73] border-[#173F73]'
                 : 'bg-white border-gray-200'
                 }`}
             >
-              <Text className={`text-xs font-extrabold ${txFilter === 'contribution' ? 'text-[#D8C911]' : 'text-gray-600'}`}>
+              <Text className={`text-xs font-extrabold ${txFilter === 'contribution' ? 'text-[#19A66A]' : 'text-gray-600'}`}>
                 Cotisations ↗
               </Text>
             </TouchableOpacity>
@@ -386,11 +429,11 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={() => setTxFilter('payout')}
               className={`px-3.5 py-1.5 rounded-full border ${txFilter === 'payout'
-                ? 'bg-[#04252D] border-[#04252D]'
+                ? 'bg-[#173F73] border-[#173F73]'
                 : 'bg-white border-gray-200'
                 }`}
             >
-              <Text className={`text-xs font-extrabold ${txFilter === 'payout' ? 'text-[#D8C911]' : 'text-gray-600'}`}>
+              <Text className={`text-xs font-extrabold ${txFilter === 'payout' ? 'text-[#19A66A]' : 'text-gray-600'}`}>
                 Versements ↙
               </Text>
             </TouchableOpacity>
@@ -398,7 +441,7 @@ export default function DashboardScreen() {
 
           {/* Transaction List */}
           {isTxLoading ? (
-            <ActivityIndicator size="small" color="#D8C911" className="my-4" />
+            <ActivityIndicator size="small" color="#19A66A" className="my-4" />
           ) : filteredTransactions.length === 0 ? (
             <View className="bg-white rounded-2xl p-6 items-center border border-gray-100">
               <Text className="text-sm font-semibold text-gray-500">Aucune transaction trouvée.</Text>
@@ -417,14 +460,14 @@ export default function DashboardScreen() {
                     {/* Icon Badge */}
                     <View
                       className={`w-10 h-10 rounded-2xl items-center justify-center border ${isPayout
-                        ? 'bg-[#FAF8D6] border-[#D8C911]'
+                        ? 'bg-[#D4F2E4] border-[#19A66A]'
                         : 'bg-slate-100 border-slate-200'
                         }`}
                     >
                       {isPayout ? (
-                        <ArrowDownLeftIcon size={20} color="#04252D" />
+                        <ArrowDownLeftIcon size={20} color="#173F73" />
                       ) : (
-                        <ArrowUpRightIcon size={20} color="#04252D" />
+                        <ArrowUpRightIcon size={20} color="#173F73" />
                       )}
                     </View>
 
@@ -662,7 +705,7 @@ export default function DashboardScreen() {
                       }`}
                   >
                     {selectedTxModal.type === 'payout' ? (
-                      <ArrowDownLeftIcon size={28} color="#10B981" />
+                      <ArrowDownLeftIcon size={28} color="#19A66A" />
                     ) : (
                       <ArrowUpRightIcon size={28} color="#06B6D4" />
                     )}

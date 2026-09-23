@@ -10,8 +10,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
-    "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true
-  }
+    "strictNullChecks": true,
+    "paths": {
+      "@tontine/types": ["../../packages/types/dist/index"]
+    }
+  },
+  "include": ["src/**/*"]
 }

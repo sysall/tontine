@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, totalBalanceFcfa, onR
       case 'clients':
         return 'Répertoire des Clients & Natts Souscrits';
       case 'natts':
-        return 'Paramétrage des 3 Systèmes d’Épargne Natt';
+        return 'Paramétrage des 3 Systèmes d\u2019Épargne Natt';
       case 'cotisations':
         return 'Historique des Dépôts & Cotisations';
       default:
@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, totalBalanceFcfa, onR
       <div>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{getTitle()}</h2>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#19A66A', display: 'inline-block' }}></span>
           Système Tontine Express
         </div>
       </div>
@@ -46,14 +46,14 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, totalBalanceFcfa, onR
             width: '38px',
             height: '38px',
             borderRadius: '12px',
-            background: '#D8C911',
-            color: '#04252D',
+            background: '#19A66A',
+            color: '#FFFFFF',
             fontWeight: 900,
             fontSize: '0.9rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 10px rgba(216, 201, 17, 0.3)'
+            boxShadow: '0 4px 10px rgba(25, 166, 106, 0.3)'
           }}>
             TE
           </div>
@@ -67,9 +67,9 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, totalBalanceFcfa, onR
               onClick={onLogout}
               title="Se déconnecter"
               style={{
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#f87171',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                color: '#ef4444',
                 padding: '0.4rem',
                 borderRadius: '8px',
                 cursor: 'pointer',

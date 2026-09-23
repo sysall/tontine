@@ -98,13 +98,13 @@ export default function ContributeScreen() {
       {/* Main Scroll Content */}
       <ScrollView className="flex-1 px-5 pt-4 pb-8" showsVerticalScrollIndicator={false}>
         {/* Intro Info Box */}
-        <View className="bg-[#04252D] rounded-3xl p-5 mb-5 shadow-lg border border-[#D8C911]/30">
+        <View className="bg-[#173F73] rounded-3xl p-5 mb-5 shadow-lg border border-[#19A66A]/30">
           <View className="flex-row items-center space-x-3 mb-2">
-            <View className="w-10 h-10 rounded-2xl bg-[#D8C911]/20 items-center justify-center border border-[#D8C911]/40">
-              <WalletIcon size={22} color="#D8C911" />
+            <View className="w-10 h-10 rounded-2xl bg-[#19A66A]/20 items-center justify-center border border-[#19A66A]/40">
+              <WalletIcon size={22} color="#19A66A" />
             </View>
             <View className="flex-1">
-              <Text className="text-xs uppercase tracking-widest text-[#D8C911] font-extrabold">
+              <Text className="text-xs uppercase tracking-widest text-[#19A66A] font-extrabold">
                 Versements Sécurisés 🔒
               </Text>
               <Text className="text-base font-black text-white">
@@ -124,7 +124,7 @@ export default function ContributeScreen() {
         {/* Active Tontine Cards List */}
         {isLoading ? (
           <View className="py-12 items-center">
-            <ActivityIndicator size="large" color="#D8C911" />
+            <ActivityIndicator size="large" color="#19A66A" />
             <Text className="text-xs font-semibold text-gray-500 mt-3">
               Chargement de vos tontines actives...
             </Text>
@@ -139,9 +139,9 @@ export default function ContributeScreen() {
             </Text>
             <TouchableOpacity
               onPress={() => router.push('/my-tontines')}
-              className="px-6 py-3 bg-[#04252D] rounded-2xl border border-[#D8C911]/30"
+              className="px-6 py-3 bg-[#173F73] rounded-2xl border border-[#19A66A]/30"
             >
-              <Text className="text-xs font-black text-[#D8C911] uppercase">Voir mes tontines</Text>
+              <Text className="text-xs font-black text-[#19A66A] uppercase">Voir mes tontines</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -157,8 +157,8 @@ export default function ContributeScreen() {
                     {tontine.category}
                   </Text>
                 </View>
-                <View className="px-3 py-1 bg-[#FAF8D6] rounded-full border border-[#D8C911]">
-                  <Text className="text-[10px] font-extrabold text-[#04252D] uppercase">
+                <View className="px-3 py-1 bg-[#D4F2E4] rounded-full border border-[#19A66A]">
+                  <Text className="text-[10px] font-extrabold text-[#173F73] uppercase">
                     Tour {tontine.currentTurn} / {tontine.totalTours}
                   </Text>
                 </View>
@@ -169,7 +169,7 @@ export default function ContributeScreen() {
                   <Text className="text-[10px] text-gray-400 uppercase font-semibold">
                     Montant de la cotisation
                   </Text>
-                  <Text className="text-base font-black text-[#04252D]">
+                  <Text className="text-base font-black text-[#173F73]">
                     {tontine.amountPerCycle.toLocaleString('fr-FR')} FCFA
                   </Text>
                 </View>
@@ -187,10 +187,10 @@ export default function ContributeScreen() {
               <TouchableOpacity
                 onPress={() => setSelectedTontine(tontine)}
                 activeOpacity={0.85}
-                className="w-full bg-[#04252D] active:bg-[#0A333D] py-3.5 rounded-2xl items-center justify-center shadow-sm border border-[#D8C911]/30 flex-row space-x-2"
+                className="w-full bg-[#173F73] active:bg-[#1A4A82] py-3.5 rounded-2xl items-center justify-center shadow-sm border border-[#19A66A]/30 flex-row space-x-2"
               >
-                <SmartphoneIcon size={18} color="#D8C911" />
-                <Text className="text-xs font-black text-[#D8C911] uppercase tracking-wider">
+                <SmartphoneIcon size={18} color="#19A66A" />
+                <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
                   COTISER {tontine.amountPerCycle.toLocaleString('fr-FR')} FCFA
                 </Text>
               </TouchableOpacity>
@@ -220,7 +220,7 @@ export default function ContributeScreen() {
             {paymentSuccess ? (
               <View className="py-6 items-center">
                 <View className="w-16 h-16 rounded-full bg-emerald-100 border-2 border-emerald-500 items-center justify-center mb-3">
-                  <ShieldCheckIcon size={34} color="#10B981" />
+                  <ShieldCheckIcon size={34} color="#19A66A" />
                 </View>
                 <Text className="text-xl font-black text-brand-dark text-center mb-1">
                   Cotisation Effectuée ! 🎉
@@ -231,9 +231,9 @@ export default function ContributeScreen() {
 
                 <TouchableOpacity
                   onPress={handleCloseModal}
-                  className="w-full bg-[#04252D] py-4 rounded-2xl items-center border border-[#D8C911]/30"
+                  className="w-full bg-[#173F73] py-4 rounded-2xl items-center border border-[#19A66A]/30"
                 >
-                  <Text className="text-xs font-black text-[#D8C911] uppercase tracking-wider">
+                  <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
                     RETOURNER AU TABLEAU DE BORD
                   </Text>
                 </TouchableOpacity>
@@ -249,7 +249,7 @@ export default function ContributeScreen() {
                   onPress={() => setSelectedProvider('wave')}
                   activeOpacity={0.85}
                   className={`p-4 rounded-2xl border mb-3 flex-row justify-between items-center ${selectedProvider === 'wave'
-                      ? 'bg-[#FAF8D6] border-[#D8C911]'
+                      ? 'bg-[#D4F2E4] border-[#19A66A]'
                       : 'bg-white border-gray-200'
                     }`}
                 >
@@ -265,7 +265,7 @@ export default function ContributeScreen() {
                     </View>
                   </View>
                   {selectedProvider === 'wave' && (
-                    <Text className="text-base font-black text-[#04252D]">✓</Text>
+                    <Text className="text-base font-black text-[#173F73]">✓</Text>
                   )}
                 </TouchableOpacity>
 
@@ -274,7 +274,7 @@ export default function ContributeScreen() {
                   onPress={() => setSelectedProvider('orange_money')}
                   activeOpacity={0.85}
                   className={`p-4 rounded-2xl border mb-5 flex-row justify-between items-center ${selectedProvider === 'orange_money'
-                      ? 'bg-[#FAF8D6] border-[#D8C911]'
+                      ? 'bg-[#D4F2E4] border-[#19A66A]'
                       : 'bg-white border-gray-200'
                     }`}
                 >
@@ -290,7 +290,7 @@ export default function ContributeScreen() {
                     </View>
                   </View>
                   {selectedProvider === 'orange_money' && (
-                    <Text className="text-base font-black text-[#04252D]">✓</Text>
+                    <Text className="text-base font-black text-[#173F73]">✓</Text>
                   )}
                 </TouchableOpacity>
 
@@ -299,12 +299,12 @@ export default function ContributeScreen() {
                   onPress={handlePay}
                   disabled={isProcessing}
                   activeOpacity={0.85}
-                  className="w-full bg-[#04252D] active:bg-[#0A333D] py-4 rounded-2xl items-center justify-center border border-[#D8C911]/30"
+                  className="w-full bg-[#173F73] active:bg-[#1A4A82] py-4 rounded-2xl items-center justify-center border border-[#19A66A]/30"
                 >
                   {isProcessing ? (
-                    <ActivityIndicator color="#D8C911" />
+                    <ActivityIndicator color="#19A66A" />
                   ) : (
-                    <Text className="text-sm font-black text-[#D8C911] uppercase tracking-wider">
+                    <Text className="text-sm font-black text-[#19A66A] uppercase tracking-wider">
                       VALIDER ET PAYER {selectedTontine?.amountPerCycle.toLocaleString('fr-FR')} FCFA
                     </Text>
                   )}

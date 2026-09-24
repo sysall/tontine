@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,11 +25,17 @@ import { useAuthStore } from '../store/useAuthStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, updatePaymentMethod, logout } = useAuthStore();
+  const { user, isAuthenticated, updatePaymentMethod, logout } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, user, router]);
 
   const isKycVerified = user?.isVerified || false;
   const activePaymentProvider = user?.defaultPaymentProvider || 'wave';
-  const activePaymentPhone = user?.paymentPhoneNumber || user?.phoneNumber || '+221 77 123 45 67';
+  const activePaymentPhone = user?.paymentPhoneNumber || user?.phoneNumber || '';
 
   // KYC Modal State
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
@@ -184,11 +190,13 @@ export default function ProfileScreen() {
             <UserIcon size={38} color="#19A66A" focused />
           </View>
           <Text className="text-xl font-black text-brand-dark">
-            {user?.fullName || 'Fatou Sow'}
+            {user?.fullName || user?.phoneNumber || 'Membre'}
           </Text>
-          <Text className="text-sm font-extrabold text-[#173F73] mt-0.5">
-            {user?.phoneNumber || '+221 77 123 45 67'}
-          </Text>
+          {user?.phoneNumber ? (
+            <Text className="text-sm font-extrabold text-[#173F73] mt-0.5">
+              {user.phoneNumber}
+            </Text>
+          ) : null}
 
           <View className="mt-4 px-4 py-1.5 bg-[#D4F2E4] rounded-full border border-[#19A66A] flex-row items-center space-x-1.5">
             <ShieldCheckIcon size={14} color="#173F73" />

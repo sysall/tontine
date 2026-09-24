@@ -37,21 +37,21 @@ export class AdminEventsController {
   @Get()
   @ApiOperation({ summary: 'Liste complète des Natts Événements (Admin)' })
   @ApiHeader({ name: 'x-user-role', description: 'Rôle utilisateur (ex: admin)', required: false })
-  getAllEvents(@Headers('x-user-role') role?: string) {
+  async getAllEvents(@Headers('x-user-role') role?: string) {
     this.checkAdminRole(role);
     return {
       success: true,
-      events: this.tontineService.getAllEventNattsForAdmin(),
+      events: await this.tontineService.getAllEventNattsForAdmin(),
     };
   }
 
   @Get(':eventId')
   @ApiOperation({ summary: 'Détails d\'un Natt Événement' })
   @ApiParam({ name: 'eventId', description: 'ID de l\'événement' })
-  getEventById(@Param('eventId') eventId: string) {
+  async getEventById(@Param('eventId') eventId: string) {
     return {
       success: true,
-      event: this.tontineService.getEventNattById(eventId),
+      event: await this.tontineService.getEventNattById(eventId),
     };
   }
 
@@ -60,12 +60,12 @@ export class AdminEventsController {
   @ApiOperation({ summary: 'A. Créer une nouvelle campagne Natt Événement' })
   @ApiHeader({ name: 'x-user-role', description: 'Rôle admin requis', required: true })
   @ApiResponse({ status: 201, description: 'Natt Événement créé avec succès.' })
-  createEvent(
+  async createEvent(
     @Body() dto: CreateEventNattDto,
     @Headers('x-user-role') role?: string
   ) {
     this.checkAdminRole(role);
-    const event = this.tontineService.createEventNatt(dto);
+    const event = await this.tontineService.createEventNatt(dto);
     return {
       success: true,
       message: `Natt Événement "${event.title}" créé avec succès par l'Admin !`,
@@ -78,13 +78,13 @@ export class AdminEventsController {
   @ApiOperation({ summary: 'A. Modifier un Natt Événement ouvert' })
   @ApiParam({ name: 'eventId', description: 'ID de l\'événement à modifier' })
   @ApiHeader({ name: 'x-user-role', description: 'Rôle admin requis', required: true })
-  updateEvent(
+  async updateEvent(
     @Param('eventId') eventId: string,
     @Body() dto: UpdateEventNattDto,
     @Headers('x-user-role') role?: string
   ) {
     this.checkAdminRole(role);
-    const updated = this.tontineService.updateEventNatt(eventId, dto);
+    const updated = await this.tontineService.updateEventNatt(eventId, dto);
     return {
       success: true,
       message: `Natt Événement "${updated.title}" mis à jour avec succès.`,
@@ -97,12 +97,12 @@ export class AdminEventsController {
   @ApiOperation({ summary: 'A. Supprimer / Archiver un Natt Événement' })
   @ApiParam({ name: 'eventId', description: 'ID de l\'événement à supprimer' })
   @ApiHeader({ name: 'x-user-role', description: 'Rôle admin requis', required: true })
-  deleteEvent(
+  async deleteEvent(
     @Param('eventId') eventId: string,
     @Headers('x-user-role') role?: string
   ) {
     this.checkAdminRole(role);
-    const result = this.tontineService.deleteEventNatt(eventId);
+    const result = await this.tontineService.deleteEventNatt(eventId);
     return result;
   }
 }

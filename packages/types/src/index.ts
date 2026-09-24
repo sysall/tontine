@@ -115,3 +115,34 @@ export interface Transaction {
   createdAt: string;
   updatedAt?: string;
 }
+
+/**
+ * 7. User & Authentication Models (/users/{uid})
+ */
+export type UserRole = 'MEMBER' | 'ADMIN';
+
+export interface UserDocument {
+  uid: string;
+  phoneNumber?: string | null;
+  email?: string | null;
+  fullName?: string | null;
+  role: UserRole;
+  isVerified: boolean;
+  balanceFcfa: number;
+  avatarUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FirebaseAuthSyncDto {
+  idToken: string;
+  fullName?: string;
+  role?: UserRole;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  user: UserDocument;
+  token: string;
+}
+

@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, Matches, IsOptional, IsIn } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RequestOtpDto {
   @ApiProperty({
@@ -31,4 +31,31 @@ export class VerifyOtpDto {
   @IsString()
   @Matches(/^\d{6}$/, { message: 'Le code OTP doit comporter exactement 6 chiffres' })
   code: string;
+}
+
+export class FirebaseLoginDto {
+  @ApiProperty({
+    description: 'Token ID Firebase fourni par le SDK client Firebase Auth',
+    example: 'eyJhbGciOiJSUzI1NiIs...',
+  })
+  @IsNotEmpty({ message: 'Le token Firebase idToken est requis' })
+  @IsString({ message: 'Le token Firebase doit être une chaîne' })
+  idToken: string;
+
+  @ApiPropertyOptional({
+    description: 'Prénom & Nom du membre (optionnel lors de la connexion)',
+    example: 'Fatou Sow',
+  })
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Rôle demandé (MEMBER par défaut)',
+    example: 'MEMBER',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['MEMBER', 'ADMIN'])
+  role?: 'MEMBER' | 'ADMIN';
 }

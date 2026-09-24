@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: tontine-postgres
-    restart: always
-    environment:
-      POSTGRES_USER: tontine_user
-      POSTGRES_PASSWORD: tontine_password
-      POSTGRES_DB: tontine_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tontine_user -d tontine_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
     container_name: tontine-redis
@@ -35,24 +17,31 @@ services:
 
   api:
     build:
-      context: ./services/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/api/Dockerfile
     container_name: tontine-api
     restart: always
     ports:
       - "3000:3000"
     environment:
       PORT: 3000
-      DATABASE_URL: postgresql://tontine_user:tontine_password@postgres:5432/tontine_db?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: super_secret_tontine_express_jwt_key_2026
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: tontine-web
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
 volumes:
-  postgres_data:
   redis_data:

@@ -23,20 +23,20 @@ export class NattsController {
 
   @Get('offers')
   @ApiOperation({ summary: 'Catalogue complet : Natts Permanents & Natts Événements Actifs' })
-  getOffersCatalog() {
+  async getOffersCatalog() {
     return {
       success: true,
       permanentCatalogs: this.tontineService.getPermanentCatalogs(),
-      eventNatts: this.tontineService.getActiveEventNatts(),
+      eventNatts: await this.tontineService.getActiveEventNatts(),
     };
   }
 
   @Get('events')
   @ApiOperation({ summary: 'Liste des Natts Événements dynamiques actuellement ouverts' })
-  getActiveEvents() {
+  async getActiveEvents() {
     return {
       success: true,
-      events: this.tontineService.getActiveEventNatts(),
+      events: await this.tontineService.getActiveEventNatts(),
     };
   }
 
@@ -44,8 +44,8 @@ export class NattsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'B. Souscrire à un Natt (Permanent ou Événementiel)' })
   @ApiResponse({ status: 201, description: 'Souscription enregistrée avec succès.' })
-  subscribeNatt(@Body() dto: SubscribeNattDto) {
-    const userNatt = this.tontineService.subscribeClientToNatt(dto);
+  async subscribeNatt(@Body() dto: SubscribeNattDto) {
+    const userNatt = await this.tontineService.subscribeClientToNatt(dto);
     return {
       success: true,
       message: `Souscription réussie au Natt "${userNatt.title}" !`,
@@ -157,5 +157,23 @@ export class AdminTreasuryController {
       success: true,
       treasury: this.tontineService.getTreasuryVault(),
     };
+  }
+}
+
+@ApiTags('Tontines Dashboard & Transactions')
+@Controller('api/v1/tontines')
+export class TontinesDashboardController {
+  constructor(private readonly tontineService: TontineTransactionService) {}
+
+  @Get('dashboard-summary')
+  @ApiOperation({ summary: 'Résumé du tableau de bord utilisateur depuis Cloud Firestore' })
+  async getDashboardSummary(@Query('userId') userId?: string) {
+    return this.tontineService.getDashboardSummary(userId);
+  }
+
+  @Get('transactions')
+  @ApiOperation({ summary: 'Historique des transactions depuis Cloud Firestore' })
+  async getTransactions(@Query('userId') userId?: string) {
+    return this.tontineService.getTransactionsFromFirestore(userId);
   }
 }

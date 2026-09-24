@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,19 @@ import {
   TontineIcon,
   CalendarIcon,
   BoltIcon,
-  SparklesIcon,
-  WalletIcon
+  WalletIcon,
 } from '../components/Icons';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function NattRecapScreen() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, user, router]);
   const params = useLocalSearchParams<{
     offerId?: string;
     offerTitle?: string;

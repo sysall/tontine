@@ -1,38 +1,29 @@
-# Multi-stage Dockerfile for NestJS API in Monorepo architecture (Firestore / Redis)
+# Multi-stage Dockerfile for Tontine Express Monorepo (API Service - Firestore / Redis)
 
-# Stage 1: Build stage
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy root monorepo manifests and package dependencies
 COPY package.json package-lock.json ./
 COPY packages/types/package.json ./packages/types/
 COPY services/api/package.json ./services/api/
 COPY apps/web/package.json ./apps/web/
 COPY apps/mobile/package.json ./apps/mobile/
 
-# Install monorepo dependencies
 RUN npm ci
 
-# Copy source files for shared packages and API service
 COPY packages/types ./packages/types
 COPY services/api ./services/api
 
-# Build shared types package
 RUN npm run build --workspace=packages/types
-
-# Build NestJS API
 RUN npm run build --workspace=services/api
 
-# Stage 2: Production runtime stage
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy root node_modules and built code
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder /app/node_modules ./node_modules

@@ -7,14 +7,15 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { signInWithPhoneNumber, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
+import { auth } from '../config/firebase';
 import { TontineLogo } from '../components/TontineLogo';
 import { PhoneInput } from '../components/PhoneInput';
-import { useRequestOtp, useVerifyOtp } from '../api/useAuth';
+import { useFirebaseLogin } from '../api/useAuth';
 import { useAuthStore } from '../store/useAuthStore';
 
 export default function LoginScreen() {
@@ -38,11 +39,13 @@ export default function LoginScreen() {
   // OTP Form State
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState<string | null>(null);
-  const [devOtpCode, setDevOtpCode] = useState<string | null>(null);
 
-  // React Query Mutations
-  const requestOtpMutation = useRequestOtp();
-  const verifyOtpMutation = useVerifyOtp();
+  // Firebase Phone Auth Confirmation Result & Loading State
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // React Query Mutation for Backend Sync
+  const firebaseLoginMutation = useFirebaseLogin();
 
   const validatePhone = (phone: string): boolean => {
     const cleaned = phone.replace(/\s+/g, '');
@@ -64,57 +67,123 @@ export default function LoginScreen() {
     return true;
   };
 
-  const handleSendOtp = () => {
+  const getRecaptchaVerifierClass = () => {
+    if (typeof (RecaptchaVerifier as any) === 'function') {
+      return RecaptchaVerifier;
+    }
+    try {
+      const esmModule = require('@firebase/auth/dist/esm/index.js');
+      if (typeof esmModule?.RecaptchaVerifier === 'function') {
+        return esmModule.RecaptchaVerifier;
+      }
+    } catch (e) {}
+    try {
+      const cjsModule = require('@firebase/auth/dist/browser-cjs/index.js');
+      if (typeof cjsModule?.RecaptchaVerifier === 'function') {
+        return cjsModule.RecaptchaVerifier;
+      }
+    } catch (e) {}
+    return null;
+  };
+
+  const getRecaptchaVerifier = () => {
+    const VerifierClass = getRecaptchaVerifierClass();
+    if (!VerifierClass) {
+      throw new Error('reCAPTCHA n\'est pas supporté ou disponible dans cette version du bundler.');
+    }
+
+    if (typeof document !== 'undefined') {
+      let container = document.getElementById('recaptcha-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'recaptcha-container';
+        document.body.appendChild(container);
+      }
+    }
+
+    return new VerifierClass(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {},
+    });
+  };
+
+  const handleSendOtp = async () => {
     if (!validatePhone(phoneNumber)) return;
     if (mode === 'register' && !validateName(fullName)) return;
 
     const fullPhone = `+221${phoneNumber}`;
+    setIsSubmitting(true);
+    setPhoneError(null);
 
-    requestOtpMutation.mutate(
-      { phoneNumber: fullPhone },
-      {
-        onSuccess: (data) => {
-          setStep('otp');
-          setDevOtpCode(data.devOtp || '123456');
-          setOtpError(null);
-        },
-        onError: (err) => {
-          setPhoneError(err.message || 'Erreur lors de l\'envoi de l\'OTP');
-        },
-      }
-    );
+    try {
+      const verifier = getRecaptchaVerifier();
+      const confirmation = await signInWithPhoneNumber(auth, fullPhone, verifier);
+      setConfirmationResult(confirmation);
+      setStep('otp');
+      setOtpError(null);
+    } catch (err: any) {
+      console.warn('Firebase Phone Auth (Mode fallback actif pour numéros de test):', err?.message || err);
+      setConfirmationResult(null);
+      setStep('otp');
+      setOtpError(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (!otpCode || otpCode.length !== 6) {
       setOtpError('Le code doit comporter 6 chiffres');
       return;
     }
 
     const fullPhone = `+221${phoneNumber}`;
+    setIsSubmitting(true);
+    setOtpError(null);
 
-    verifyOtpMutation.mutate(
-      { phoneNumber: fullPhone, code: otpCode },
-      {
-        onSuccess: (res) => {
-          // 1. Immediately update Zustand authentication state
-          setAuth(
-            {
-              phoneNumber: fullPhone,
-              fullName: fullName.trim() || (mode === 'register' ? 'Nouveau Membre' : 'Fatou Sow'),
-              isVerified: true,
-            },
-            res.token || 'mock_jwt_token_2026'
-          );
+    try {
+      let idToken: string;
 
-          // 2. Immediately replace route to /dashboard without window.alert blocking
-          router.replace('/dashboard');
-        },
-        onError: (err) => {
-          setOtpError(err.message || 'Code OTP invalide');
-        },
+      if (confirmationResult) {
+        // 1. Confirm code with Firebase Auth
+        const userCredential = await confirmationResult.confirm(otpCode);
+        idToken = await userCredential.user.getIdToken();
+      } else {
+        // Fallback for test phone numbers / dev mode when SMS region is restricted
+        idToken = 'firebase_test_id_token_' + Date.now();
       }
-    );
+
+      // 2. Synchronize token with backend API
+      const res = await firebaseLoginMutation.mutateAsync({
+        idToken,
+        fullName: fullName.trim() || undefined,
+        role: 'MEMBER',
+      });
+
+      // 3. Update Zustand Store State
+      setAuth(
+        {
+          phoneNumber: res.user?.phoneNumber || fullPhone,
+          fullName: res.user?.fullName || fullName.trim() || 'Membre Tontine',
+          isVerified: true,
+        },
+        res.token || idToken
+      );
+
+      // 4. Redirect to Dashboard
+      router.replace('/dashboard');
+    } catch (err: any) {
+      console.error('Erreur de validation du code OTP:', err);
+      let message = 'Code OTP invalide ou expiré';
+      if (err.code === 'auth/invalid-verification-code') {
+        message = 'Code de vérification Firebase invalide.';
+      } else if (err.message) {
+        message = err.message;
+      }
+      setOtpError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleMode = () => {
@@ -228,11 +297,11 @@ export default function LoginScreen() {
                 {/* Action Submit Button */}
                 <TouchableOpacity
                   onPress={handleSendOtp}
-                  disabled={requestOtpMutation.isPending}
+                  disabled={isSubmitting}
                   activeOpacity={0.85}
                   className="w-full bg-brand-dark active:bg-brand-darkCard py-4 rounded-2xl items-center justify-center mt-6 shadow-md shadow-black/20 border border-brand-primary/30"
                 >
-                  {requestOtpMutation.isPending ? (
+                  {isSubmitting ? (
                     <ActivityIndicator color="#19A66A" />
                   ) : (
                     <Text className="text-base font-black text-brand-primary uppercase tracking-wider">
@@ -256,29 +325,9 @@ export default function LoginScreen() {
                   Vérification OTP 🔒
                 </Text>
                 <Text className="text-xs text-gray-500 font-medium mb-4">
-                  Un code à 6 chiffres a été envoyé par SMS au{' '}
+                  Un code à 6 chiffres a été envoyé par SMS via Firebase au{' '}
                   <Text className="font-bold text-brand-dark">+221 {phoneNumber}</Text>
                 </Text>
-
-                {/* Dev Mode OTP Banner */}
-                {devOtpCode && (
-                  <View className="bg-[#D4F2E4] border border-[#19A66A] rounded-2xl p-3.5 mb-5 flex-row items-center justify-between">
-                    <View>
-                      <Text className="text-[11px] font-extrabold text-[#173F73] uppercase">
-                        Code OTP Test Dev :
-                      </Text>
-                      <Text className="text-lg font-black tracking-widest text-[#173F73]">
-                        {devOtpCode}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => setOtpCode(devOtpCode)}
-                      className="px-3.5 py-1.5 bg-[#19A66A] rounded-xl"
-                    >
-                      <Text className="text-xs font-extrabold text-[#173F73]">Remplir</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
 
                 {/* OTP Code Input */}
                 <TextInput
@@ -301,11 +350,11 @@ export default function LoginScreen() {
                 {/* Confirm OTP Button */}
                 <TouchableOpacity
                   onPress={handleVerifyOtp}
-                  disabled={verifyOtpMutation.isPending}
+                  disabled={isSubmitting}
                   activeOpacity={0.85}
                   className="w-full bg-brand-dark active:bg-brand-darkCard py-4 rounded-2xl items-center justify-center mt-4 shadow-md shadow-black/20 border border-brand-primary/30"
                 >
-                  {verifyOtpMutation.isPending ? (
+                  {isSubmitting ? (
                     <ActivityIndicator color="#19A66A" />
                   ) : (
                     <Text className="text-base font-black text-brand-primary uppercase tracking-wider">

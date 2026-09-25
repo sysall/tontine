@@ -18,15 +18,9 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: {
-    phoneNumber: '+221771234567',
-    fullName: 'Fatou Sow',
-    isVerified: true,
-    defaultPaymentProvider: 'wave',
-    paymentPhoneNumber: '+221771234567',
-  },
-  token: 'mock_jwt_token_2026',
-  isAuthenticated: true,
+  user: null,
+  token: null,
+  isAuthenticated: false,
 
   setAuth: (user: UserProfile, token: string) =>
     set({ user, token, isAuthenticated: true }),

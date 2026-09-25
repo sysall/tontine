@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,39 +17,18 @@ import { useAuthStore } from '../store/useAuthStore';
 
 export default function ContributeScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { data: dashboardData, isLoading } = useDashboardSummary();
+  const { user, isAuthenticated } = useAuthStore();
 
-  const activeTontines: ActiveTontineItem[] = dashboardData?.tontines || [
-    {
-      id: 'tontine-1',
-      name: 'Natt Classique',
-      offerType: 'rotative',
-      category: 'Rotative Mensuelle',
-      amountPerCycle: 50000,
-      currentTurn: 3,
-      totalTours: 10,
-      totalMembers: 10,
-      myContributionFcfa: 150000,
-      myPayoutTurn: 5,
-      nextTurnDate: '25 Août 2026',
-      status: 'ACTIVE',
-    },
-    {
-      id: 'tontine-2',
-      name: 'Tekk Tegui',
-      offerType: 'projet',
-      category: 'Rotative Journalière',
-      amountPerCycle: 25000,
-      currentTurn: 4,
-      totalTours: 8,
-      totalMembers: 8,
-      myContributionFcfa: 100000,
-      myPayoutTurn: 8,
-      nextTurnDate: '1er Septembre 2026',
-      status: 'ACTIVE',
-    },
-  ];
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, user, router]);
+
+  const userPhoneOrId = user?.phoneNumber || user?.paymentPhoneNumber;
+  const { data: dashboardData, isLoading } = useDashboardSummary(userPhoneOrId);
+
+  const activeTontines: ActiveTontineItem[] = dashboardData?.tontines || [];
 
   // Payment Selection State
   const [selectedTontine, setSelectedTontine] = useState<ActiveTontineItem | null>(null);

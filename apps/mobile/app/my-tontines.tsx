@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,111 +10,50 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { TontineIcon } from '../components/Icons';
+import { useAuthStore } from '../store/useAuthStore';
 import { useDashboardSummary } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 
 type StatusFilterType = 'active' | 'pending' | 'completed';
 
-// Extended mock item type for pending & completed status demonstration
 export interface ExtendedTontineItem extends ActiveTontineItem {
   statusCategory: 'active' | 'pending' | 'completed';
   startDateInfo?: string;
   payoutDateInfo?: string;
 }
 
-const EXTRA_MOCK_TONTINES: ExtendedTontineItem[] = [
-  // Active (from dashboard API)
-  {
-    id: 'tontine-1',
-    name: 'Natt Classique',
-    offerType: 'rotative',
-    category: 'Rotative Mensuelle',
-    amountPerCycle: 50000,
-    currentTurn: 3,
-    totalTours: 10,
-    totalMembers: 10,
-    myContributionFcfa: 150000,
-    myPayoutTurn: 5,
-    nextTurnDate: '25 Août 2026',
-    status: 'ACTIVE',
-    statusCategory: 'active',
-  },
-  {
-    id: 'tontine-2',
-    name: 'Tekk Tegui',
-    offerType: 'projet',
-    category: 'Rotative Journalière',
-    amountPerCycle: 25000,
-    currentTurn: 4,
-    totalTours: 8,
-    totalMembers: 8,
-    myContributionFcfa: 100000,
-    myPayoutTurn: 8,
-    nextTurnDate: '1er Septembre 2026',
-    status: 'ACTIVE',
-    statusCategory: 'active',
-  },
-  // Pending (En attente de démarrage)
-  {
-    id: 'tontine-pending-1',
-    name: 'Tabaski Premium',
-    offerType: 'rotative',
-    category: 'Événementiel Mensuel',
-    amountPerCycle: 100000,
-    currentTurn: 0,
-    totalTours: 6,
-    totalMembers: 6,
-    myContributionFcfa: 0,
-    myPayoutTurn: 2,
-    nextTurnDate: '1er Septembre 2026',
-    status: 'PENDING',
-    statusCategory: 'pending',
-    startDateInfo: 'Début le 1er Septembre (4/6 membres prêts)',
-  },
-  {
-    id: 'tontine-pending-2',
-    name: 'Natt Magal Touba',
-    offerType: 'rotative',
-    category: 'Rotative Spéciale',
-    amountPerCycle: 75000,
-    currentTurn: 0,
-    totalTours: 4,
-    totalMembers: 4,
-    myContributionFcfa: 0,
-    myPayoutTurn: 1,
-    nextTurnDate: '15 Septembre 2026',
-    status: 'PENDING',
-    statusCategory: 'pending',
-    startDateInfo: 'Tirage de l\'ordre des tours en cours',
-  },
-  // Completed (Terminé)
-  {
-    id: 'tontine-completed-1',
-    name: 'Korité Express 2026',
-    offerType: 'rotative',
-    category: 'Événementiel Clôturé',
-    amountPerCycle: 50000,
-    currentTurn: 5,
-    totalTours: 5,
-    totalMembers: 5,
-    myContributionFcfa: 250000,
-    myPayoutTurn: 2,
-    nextTurnDate: 'Clôturé le 15 Juin 2026',
-    status: 'COMPLETED',
-    statusCategory: 'completed',
-    payoutDateInfo: 'Gain de 250.000 FCFA perçu avec succès ✓',
-  },
-];
-
 export default function MyTontinesScreen() {
   const router = useRouter();
-  const { data: dashboardData, isLoading, refetch } = useDashboardSummary();
+  const { user, isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, user, router]);
+
+  const userPhoneOrId = user?.phoneNumber || user?.paymentPhoneNumber;
+  const { data: dashboardData, isLoading, refetch } = useDashboardSummary(userPhoneOrId);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('active');
 
-  // Merge API tontines with mock status tontines
-  const apiTontines = dashboardData?.tontines || [];
-  const allTontines: ExtendedTontineItem[] = EXTRA_MOCK_TONTINES;
+  const apiTontines: ActiveTontineItem[] = dashboardData?.tontines || [];
+
+  const allTontines: ExtendedTontineItem[] = apiTontines.map((item) => {
+    let statusCategory: 'active' | 'pending' | 'completed' = 'active';
+    if (item.status === 'COMPLETED') {
+      statusCategory = 'completed';
+    } else if (item.status === 'PENDING') {
+      statusCategory = 'pending';
+    }
+
+    return {
+      ...item,
+      statusCategory,
+      startDateInfo: item.nextTurnDate ? `Prochain versement: ${item.nextTurnDate}` : 'Lancement du cycle à venir',
+      payoutDateInfo: item.status === 'COMPLETED' ? 'Gain total perçu avec succès ✓' : undefined,
+    };
+  });
 
   const filteredTontines = allTontines.filter(
     (item) => item.statusCategory === statusFilter

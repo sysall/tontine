@@ -14,12 +14,8 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "dev": "npm run dev:api",
     "seed": "npx tsx scripts/seed-data.ts",
-    "db:push": "npm run prisma:push --workspace=services/api",
-    "db:generate": "npm run prisma:generate --workspace=services/api",
     "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down",
-    "prisma:generate": "npm run prisma:generate --workspace=services/api",
-    "prisma:push": "npm run prisma:push --workspace=services/api"
+    "docker:down": "docker compose down"
   },
   "keywords": [
     "tontine",

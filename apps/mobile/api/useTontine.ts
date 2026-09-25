@@ -1,17 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tontineApi, SubscribeOfferPayload, JoinTontinePayload } from './tontineApi';
 
-export function useDashboardSummary() {
+export function useDashboardSummary(userId?: string) {
   return useQuery({
-    queryKey: ['tontines-dashboard'],
-    queryFn: () => tontineApi.getDashboardSummary(),
+    queryKey: ['tontines-dashboard', userId],
+    queryFn: () => tontineApi.getDashboardSummary(userId),
   });
 }
 
-export function useTransactionHistory() {
+export function useTransactionHistory(userId?: string) {
   return useQuery({
-    queryKey: ['tontines-transactions'],
-    queryFn: () => tontineApi.getTransactions(),
+    queryKey: ['tontines-transactions', userId],
+    queryFn: () => tontineApi.getTransactions(userId),
+  });
+}
+
+export function useEventNatts() {
+  return useQuery({
+    queryKey: ['tontines-events'],
+    queryFn: () => tontineApi.getEventNatts(),
   });
 }
 

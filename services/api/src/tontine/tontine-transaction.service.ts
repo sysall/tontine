@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { FirestoreService } from '../firestore/firestore.service';
 import { 
   NattCatalogItem, 
   EventNatt, 
@@ -69,51 +70,7 @@ export class TontineTransactionService {
   // 6. Global Financial Transactions (/transactions)
   private readonly transactions: Transaction[] = [];
 
-  constructor() {
-    this.seedInitialEvents();
-  }
-
-  /**
-   * Seed initial sample data
-   */
-  private seedInitialEvents() {
-    const tabaski: EventNatt = {
-      eventId: 'evt-tabaski-2026',
-      title: 'Opération Tabaski 2026',
-      description: 'Épargne ciblée pour l\'achat de moutons et préparatifs de la fête de la Tabaski.',
-      bannerImageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80',
-      targetAmount: 300000,
-      thresholdAmount: 210000, // 70% of 300,000
-      installmentAmount: 50000,
-      frequency: 'MONTHLY',
-      subscriptionDeadline: '2026-05-15T23:59:59.000Z',
-      eventDueDate: '2026-06-15T00:00:00.000Z',
-      status: 'ACTIVE',
-      createdBy: 'admin-super',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const rentree: EventNatt = {
-      eventId: 'evt-rentree-2026',
-      title: 'Pack Rentrée Scolaire 2026',
-      description: 'Cotisation bimensuelle pour les fournitures et frais de scolarité des enfants.',
-      bannerImageUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80',
-      targetAmount: 150000,
-      thresholdAmount: 105000, // 70% of 150,000
-      installmentAmount: 15000,
-      frequency: 'WEEKLY',
-      subscriptionDeadline: '2026-09-01T23:59:59.000Z',
-      eventDueDate: '2026-10-01T00:00:00.000Z',
-      status: 'ACTIVE',
-      createdBy: 'admin-super',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.eventNatts.set(tabaski.eventId, tabaski);
-    this.eventNatts.set(rentree.eventId, rentree);
-  }
+  constructor(private readonly firestoreService: FirestoreService) {}
 
   // --- CATALOG & EVENT METHODS ---
 
@@ -121,26 +78,57 @@ export class TontineTransactionService {
     return Array.from(this.permanentCatalogs.values());
   }
 
-  getActiveEventNatts(): EventNatt[] {
-    return Array.from(this.eventNatts.values()).filter(e => e.status === 'ACTIVE');
-  }
-
-  getAllEventNattsForAdmin(): EventNatt[] {
-    return Array.from(this.eventNatts.values());
-  }
-
-  getEventNattById(eventId: string): EventNatt {
-    const event = this.eventNatts.get(eventId);
-    if (!event) {
-      throw new NotFoundException(`Natt Événement avec l'ID ${eventId} introuvable.`);
+  async getActiveEventNatts(): Promise<EventNatt[]> {
+    try {
+      const snapshot = await this.firestoreService.eventNatts().where('status', '==', 'ACTIVE').get();
+      if (!snapshot.empty) {
+        const events = snapshot.docs.map(doc => doc.data() as EventNatt);
+        for (const e of events) {
+          this.eventNatts.set(e.eventId, e);
+        }
+        return events;
+      }
+      return Array.from(this.eventNatts.values()).filter(e => e.status === 'ACTIVE');
+    } catch (err: any) {
+      this.logger.error(`Error fetching eventNatts from Firestore: ${err.message}`);
+      return Array.from(this.eventNatts.values()).filter(e => e.status === 'ACTIVE');
     }
-    return event;
+  }
+
+  async getAllEventNattsForAdmin(): Promise<EventNatt[]> {
+    try {
+      const snapshot = await this.firestoreService.eventNatts().get();
+      if (!snapshot.empty) {
+        return snapshot.docs.map(doc => doc.data() as EventNatt);
+      }
+      return Array.from(this.eventNatts.values());
+    } catch (err: any) {
+      return Array.from(this.eventNatts.values());
+    }
+  }
+
+  async getEventNattById(eventId: string): Promise<EventNatt> {
+    const memoryEvent = this.eventNatts.get(eventId);
+    if (memoryEvent) return memoryEvent;
+
+    try {
+      const doc = await this.firestoreService.eventNatts().doc(eventId).get();
+      if (doc.exists) {
+        const event = doc.data() as EventNatt;
+        this.eventNatts.set(eventId, event);
+        return event;
+      }
+    } catch (err: any) {
+      this.logger.error(`Error fetching event ${eventId} from Firestore: ${err.message}`);
+    }
+
+    throw new NotFoundException(`Natt Événement avec l'ID ${eventId} introuvable.`);
   }
 
   /**
    * A. Admin: Create Event Natt
    */
-  createEventNatt(dto: CreateEventNattDto, adminUid: string = 'admin-default'): EventNatt {
+  async createEventNatt(dto: CreateEventNattDto, adminUid: string = 'admin-default'): Promise<EventNatt> {
     const thresholdAmount = Math.round(dto.targetAmount * 0.70);
     const eventId = `evt-${Date.now()}`;
     const now = new Date().toISOString();
@@ -163,6 +151,11 @@ export class TontineTransactionService {
     };
 
     this.eventNatts.set(eventId, newEvent);
+
+    this.firestoreService.eventNatts().doc(eventId).set(newEvent).catch(err => {
+      this.logger.error(`Failed to save eventNatt ${eventId} to Firestore: ${err.message}`);
+    });
+
     this.logger.log(`[ADMIN] Created new Event Natt: ${newEvent.title} (ID: ${eventId}, Threshold: ${thresholdAmount} FCFA)`);
     return newEvent;
   }
@@ -170,8 +163,8 @@ export class TontineTransactionService {
   /**
    * A. Admin: Update Event Natt
    */
-  updateEventNatt(eventId: string, dto: UpdateEventNattDto): EventNatt {
-    const existing = this.getEventNattById(eventId);
+  async updateEventNatt(eventId: string, dto: UpdateEventNattDto): Promise<EventNatt> {
+    const existing = await this.getEventNattById(eventId);
     const targetAmount = dto.targetAmount ?? existing.targetAmount;
     const thresholdAmount = Math.round(targetAmount * 0.70);
     const now = new Date().toISOString();
@@ -185,6 +178,11 @@ export class TontineTransactionService {
     };
 
     this.eventNatts.set(eventId, updated);
+
+    this.firestoreService.eventNatts().doc(eventId).set(updated, { merge: true }).catch(err => {
+      this.logger.error(`Failed to update eventNatt ${eventId} in Firestore: ${err.message}`);
+    });
+
     this.logger.log(`[ADMIN] Updated Event Natt ID: ${eventId}`);
     return updated;
   }
@@ -193,8 +191,8 @@ export class TontineTransactionService {
    * A. Admin: Delete / Soft Delete Event Natt
    * Blocking new subscriptions without interrupting existing contracts
    */
-  deleteEventNatt(eventId: string): { success: boolean; message: string } {
-    const existing = this.getEventNattById(eventId);
+  async deleteEventNatt(eventId: string): Promise<{ success: boolean; message: string }> {
+    const existing = await this.getEventNattById(eventId);
 
     // Check if users are subscribed to this event
     const activeSubscribers = Array.from(this.userNatts.values()).filter(
@@ -205,6 +203,10 @@ export class TontineTransactionService {
     existing.status = 'DELETED';
     existing.updatedAt = new Date().toISOString();
     this.eventNatts.set(eventId, existing);
+
+    this.firestoreService.eventNatts().doc(eventId).update({ status: 'DELETED', updatedAt: existing.updatedAt }).catch(err => {
+      this.logger.error(`Failed to soft-delete eventNatt ${eventId} in Firestore: ${err.message}`);
+    });
 
     this.logger.log(`[ADMIN] Event Natt ${eventId} marked as DELETED. Active subscribers preserved: ${activeSubscribers.length}`);
 
@@ -221,7 +223,7 @@ export class TontineTransactionService {
   /**
    * B. Client Subscription (POST /api/v1/natts/subscribe)
    */
-  subscribeClientToNatt(dto: SubscribeNattDto): UserNatt {
+  async subscribeClientToNatt(dto: SubscribeNattDto): Promise<UserNatt> {
     const userNattId = `user-natt-${Date.now()}`;
     const now = new Date();
 
@@ -236,7 +238,7 @@ export class TontineTransactionService {
       if (!dto.eventId) {
         throw new BadRequestException('eventId est requis pour la souscription à un Natt Événement.');
       }
-      const event = this.getEventNattById(dto.eventId);
+      const event = await this.getEventNattById(dto.eventId);
       if (event.status !== 'ACTIVE') {
         throw new ForbiddenException(`Ce Natt Événement n'est plus actif (Statut: ${event.status}).`);
       }
@@ -311,6 +313,10 @@ export class TontineTransactionService {
 
     this.userNatts.set(userNattId, userNatt);
     this.payments.set(userNattId, []);
+
+    this.firestoreService.userNatts().doc(userNattId).set(userNatt).catch((err) => {
+      this.logger.error(`Failed to save userNatt ${userNattId} to Firestore: ${err.message}`);
+    });
 
     this.logger.log(`Client ${dto.userId} subscribed to ${title} (UserNattId: ${userNattId}, Target: ${targetAmount} FCFA)`);
     return userNatt;
@@ -476,6 +482,37 @@ export class TontineTransactionService {
     );
   }
 
+  /**
+   * Admin: Override payout date / grant exemption for a user subscription
+   */
+  async overrideUserNattPayoutDate(
+    userNattId: string,
+    customPayoutDate: string,
+    grantExemption: boolean = true
+  ): Promise<UserNatt> {
+    const userNatt = this.userNatts.get(userNattId);
+    if (!userNatt) {
+      throw new NotFoundException(`Souscription UserNatt ${userNattId} introuvable.`);
+    }
+
+    userNatt.eventDueDate = customPayoutDate;
+    if (grantExemption) {
+      userNatt.payoutEligible = true;
+      userNatt.payoutStatus = 'PENDING';
+      userNatt.status = 'PAYOUT_UNLOCKED';
+    }
+    userNatt.updatedAt = new Date().toISOString();
+
+    this.userNatts.set(userNattId, userNatt);
+
+    this.firestoreService.userNatts().doc(userNattId).set(userNatt, { merge: true }).catch(err => {
+      this.logger.error(`Failed to update payout date override for ${userNattId} in Firestore: ${err.message}`);
+    });
+
+    this.logger.log(`[ADMIN EXEMPTION] Override payout date for UserNatt ${userNattId} set to ${customPayoutDate} (Exemption: ${grantExemption})`);
+    return userNatt;
+  }
+
   // --- TREASURY & TRANSACTION QUERY METHODS ---
 
   getTreasuryVault(): Treasury {
@@ -496,5 +533,180 @@ export class TontineTransactionService {
 
   getAllTransactions(): Transaction[] {
     return this.transactions;
+  }
+
+  /**
+   * Fetch Dashboard Summary directly from Cloud Firestore
+   */
+  async getDashboardSummary(userId?: string): Promise<{
+    success: boolean;
+    summary: {
+      totalSavedFcfa: number;
+      nextPaymentFcfa: number;
+      nextPaymentDueDate: string;
+      expectedPayoutFcfa: number;
+      myPayoutTurn: number;
+      activeTontinesCount: number;
+    };
+    tontines: any[];
+  }> {
+    try {
+      let query: any = this.firestoreService.userNatts();
+      if (userId) {
+        query = query.where('userId', '==', userId);
+      }
+      const snapshot = await query.get();
+
+      let userNattsList: UserNatt[] = [];
+
+      if (!snapshot.empty) {
+        userNattsList = snapshot.docs.map((doc: any) => doc.data() as UserNatt);
+        for (const natt of userNattsList) {
+          this.userNatts.set(natt.userNattId, natt);
+        }
+      }
+
+      let totalSavedFcfa = 0;
+      let expectedPayoutFcfa = 0;
+      let activeTontinesCount = 0;
+      let nextPaymentFcfa = 0;
+      let nextPaymentDueDate = 'Non définie';
+      let earliestNextDueDate: Date | null = null;
+      let myPayoutTurn = 0;
+
+      for (const natt of userNattsList) {
+        totalSavedFcfa += natt.totalPaid || 0;
+        if (natt.status === 'ACTIVE' || natt.status === 'PAYOUT_UNLOCKED') {
+          activeTontinesCount++;
+          expectedPayoutFcfa += natt.targetAmount || 0;
+
+          if (natt.nextDueDate) {
+            const dueDate = new Date(natt.nextDueDate);
+            if (!earliestNextDueDate || dueDate < earliestNextDueDate) {
+              earliestNextDueDate = dueDate;
+              nextPaymentFcfa = natt.installmentAmount || 0;
+              myPayoutTurn = (natt.paidInstallmentsCount || 0) + 1;
+              const formattedDay = dueDate.getDate();
+              const months = [
+                'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+              ];
+              const formattedMonth = months[dueDate.getMonth()];
+              nextPaymentDueDate = `${formattedDay} ${formattedMonth}`;
+            }
+          }
+        }
+      }
+
+      const tontines = userNattsList.map((natt) => {
+        const dueDate = natt.nextDueDate ? new Date(natt.nextDueDate) : new Date();
+        const months = [
+          'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ];
+        const formattedNextTurnDate = `${dueDate.getDate()} ${months[dueDate.getMonth()]} ${dueDate.getFullYear()}`;
+
+        return {
+          id: natt.userNattId,
+          name: natt.title,
+          offerType: natt.category === 'EVENT' ? 'projet' : 'rotative',
+          category: natt.frequency === 'MONTHLY' ? 'Rotative Mensuelle' : 'Rotative Journalière',
+          amountPerCycle: natt.installmentAmount,
+          currentTurn: natt.paidInstallmentsCount || 1,
+          totalTours: natt.totalInstallments || 10,
+          totalMembers: 4,
+          myContributionFcfa: natt.totalPaid || 0,
+          myPayoutTurn: Math.ceil((natt.totalInstallments || 10) / 2),
+          nextTurnDate: formattedNextTurnDate,
+          status: natt.status || 'ACTIVE',
+        };
+      });
+
+      return {
+        success: true,
+        summary: {
+          totalSavedFcfa,
+          nextPaymentFcfa,
+          nextPaymentDueDate,
+          expectedPayoutFcfa,
+          myPayoutTurn,
+          activeTontinesCount,
+        },
+        tontines,
+      };
+    } catch (error: any) {
+      this.logger.error(`Error fetching dashboard summary from Firestore: ${error.message}`);
+      return {
+        success: true,
+        summary: {
+          totalSavedFcfa: 0,
+          nextPaymentFcfa: 0,
+          nextPaymentDueDate: 'Non définie',
+          expectedPayoutFcfa: 0,
+          myPayoutTurn: 0,
+          activeTontinesCount: 0,
+        },
+        tontines: [],
+      };
+    }
+  }
+
+  /**
+   * Fetch Transaction History directly from Cloud Firestore
+   */
+  async getTransactionsFromFirestore(userId?: string): Promise<{
+    success: boolean;
+    transactions: any[];
+  }> {
+    try {
+      let query: any = this.firestoreService.transactions();
+      if (userId) {
+        query = query.where('userId', '==', userId);
+      }
+      const snapshot = await query.get();
+
+      if (snapshot.empty) {
+        return {
+          success: true,
+          transactions: [],
+        };
+      }
+
+      const txList = snapshot.docs.map((doc: any) => doc.data() as Transaction);
+
+      const formattedTxs = txList.map((tx) => {
+        const isPayout = tx.type === 'NATT_PAYOUT';
+        const dateObj = new Date(tx.createdAt);
+        const months = [
+          'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ];
+        const formattedDate = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()} à ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+
+        return {
+          id: tx.transactionId,
+          type: isPayout ? 'payout' : 'contribution',
+          title: isPayout ? 'Versement du Natt' : 'Cotisation Natt',
+          tontineName: tx.userNattId ? 'Natt Express' : 'Cotisation',
+          amountFcfa: tx.amount,
+          provider: tx.gateway ? tx.gateway.toLowerCase().replace('_', '') : 'wave',
+          providerName: tx.gateway === 'ORANGE_MONEY' ? 'Orange Money' : 'Wave Sénégal',
+          reference: tx.gatewayReference || tx.transactionId,
+          date: formattedDate,
+          status: tx.status || 'SUCCESS',
+        };
+      });
+
+      return {
+        success: true,
+        transactions: formattedTxs,
+      };
+    } catch (error: any) {
+      this.logger.error(`Error fetching transactions from Firestore: ${error.message}`);
+      return {
+        success: true,
+        transactions: [],
+      };
+    }
   }
 }

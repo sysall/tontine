@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -37,10 +37,11 @@ import {
   SparklesIcon,
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
-import { OFFICIAL_OFFERS, OfficialOffer, OfficialTier, TransactionItem, ActiveTontineItem } from '../api/tontineApi';
+import { OFFICIAL_OFFERS, OfficialOffer, OfficialTier, TransactionItem, ActiveTontineItem, EventNattItem } from '../api/tontineApi';
 import {
   useDashboardSummary,
   useTransactionHistory,
+  useEventNatts,
   useSubscribeOffer,
   useJoinTontine,
 } from '../api/useTontine';
@@ -50,7 +51,13 @@ type TxFilterType = 'all' | 'contribution' | 'payout';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user, updatePaymentMethod, logout } = useAuthStore();
+  const { user, isAuthenticated, updatePaymentMethod, logout } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, user, router]);
 
   // Active Bottom Tab State
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -59,11 +66,16 @@ export default function DashboardScreen() {
   const [txFilter, setTxFilter] = useState<TxFilterType>('all');
   const [selectedTxModal, setSelectedTxModal] = useState<TransactionItem | null>(null);
 
+  const userPhoneOrId = user?.phoneNumber || user?.paymentPhoneNumber;
+
   // React Query Hooks
-  const { data: dashboardData, isLoading, refetch } = useDashboardSummary();
-  const { data: txData, isLoading: isTxLoading, refetch: refetchTx } = useTransactionHistory();
+  const { data: dashboardData, isLoading, refetch } = useDashboardSummary(userPhoneOrId);
+  const { data: txData, isLoading: isTxLoading, refetch: refetchTx } = useTransactionHistory(userPhoneOrId);
+  const { data: eventsData, isLoading: isEventsLoading } = useEventNatts();
   const subscribeOfferMutation = useSubscribeOffer();
   const joinTontineMutation = useJoinTontine();
+
+  const activeEventNatts: EventNattItem[] = eventsData?.events || [];
 
   // Modals state
   const [selectedOfferModal, setSelectedOfferModal] = useState<OfficialOffer | null>(null);
@@ -76,14 +88,14 @@ export default function DashboardScreen() {
     user?.defaultPaymentProvider || 'wave'
   );
   const [paymentPhoneInput, setPaymentPhoneInput] = useState(
-    user?.paymentPhoneNumber || user?.phoneNumber || '+221771234567'
+    user?.paymentPhoneNumber || user?.phoneNumber || ''
   );
 
   // Selected Tier State for Subscription Modal
   const [selectedTier, setSelectedTier] = useState<OfficialTier | null>(null);
 
-  // Natt Événement Selection State
-  const [selectedEventOption, setSelectedEventOption] = useState<'noel' | 'tabaski' | 'magal'>('noel');
+  // Natt Événement Selection State (Dynamic Event ID)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // KYC State
   const [cniNumber, setCniNumber] = useState('');
@@ -128,29 +140,28 @@ export default function DashboardScreen() {
   };
 
   const handleJoinSubmit = () => {
-    const eventLabels: Record<string, string> = {
-      noel: 'Natt Événement — Noël & Fêtes',
-      tabaski: 'Opération Tabaski 2026',
-      magal: 'Magal de Touba 2026',
-    };
+    const effectiveEventId = selectedEventId || (activeEventNatts.length > 0 ? activeEventNatts[0].eventId : null);
+    if (!effectiveEventId) {
+      Alert.alert('Information', 'Aucun Natt Événement disponible pour le moment.');
+      return;
+    }
 
-    const eventAmounts: Record<string, number> = {
-      noel: 250000,
-      tabaski: 300000,
-      magal: 500000,
-    };
-
-    const eventTitle = eventLabels[selectedEventOption] || 'Natt Événement';
-    const amountFcfa = eventAmounts[selectedEventOption] || 300000;
+    const selectedEvt = activeEventNatts.find((e) => e.eventId === effectiveEventId);
+    if (!selectedEvt) {
+      Alert.alert('Erreur', 'L\'événement sélectionné est introuvable.');
+      return;
+    }
 
     setIsJoinModalOpen(false);
 
     router.push({
       pathname: '/natt-recap',
       params: {
-        offerTitle: eventTitle,
-        amountFcfa: amountFcfa.toString(),
-        frequency: 'Mensuelle',
+        eventId: selectedEvt.eventId,
+        offerTitle: selectedEvt.title,
+        amountFcfa: selectedEvt.targetAmount.toString(),
+        installmentAmount: selectedEvt.installmentAmount.toString(),
+        frequency: selectedEvt.frequency || 'Mensuelle',
         category: 'EVENT',
       },
     });
@@ -195,12 +206,12 @@ export default function DashboardScreen() {
   };
 
   const summary = dashboardData?.summary || {
-    totalSavedFcfa: 250000,
-    nextPaymentFcfa: 50000,
-    nextPaymentDueDate: '2026-08-25',
-    expectedPayoutFcfa: 500000,
-    myPayoutTurn: 3,
-    activeTontinesCount: 2,
+    totalSavedFcfa: 0,
+    nextPaymentFcfa: 0,
+    nextPaymentDueDate: 'Non définie',
+    expectedPayoutFcfa: 0,
+    myPayoutTurn: 0,
+    activeTontinesCount: 0,
   };
 
   const tontines = dashboardData?.tontines || [];
@@ -213,7 +224,7 @@ export default function DashboardScreen() {
   });
 
   const activePaymentProvider = user?.defaultPaymentProvider || 'wave';
-  const activePaymentPhone = user?.paymentPhoneNumber || user?.phoneNumber || '+221 77 123 45 67';
+  const activePaymentPhone = user?.paymentPhoneNumber || user?.phoneNumber || '';
 
   return (
     <SafeAreaView className="flex-1 bg-brand-beige justify-between">
@@ -224,7 +235,7 @@ export default function DashboardScreen() {
           <View className="flex-1 pl-3">
             <Text className="text-xs text-gray-500 font-medium">Bienvenue</Text>
             <Text className="text-base font-extrabold text-brand-dark" numberOfLines={1}>
-              {user?.fullName || 'Fatou Sow'}
+              {user?.fullName || user?.phoneNumber || 'Membre'}
             </Text>
           </View>
         </View>
@@ -263,7 +274,7 @@ export default function DashboardScreen() {
                 <Text className="text-sm font-black text-[#19A66A]">
                   {summary.nextPaymentFcfa.toLocaleString('fr-FR')} FCFA
                 </Text>
-                <Text className="text-[10px] text-gray-300/80">Échéance: 25 Août</Text>
+                <Text className="text-[10px] text-gray-300/80">Échéance: {summary.nextPaymentDueDate || 'Non définie'}</Text>
               </View>
               <View className="items-end">
                 <Text className="text-[11px] text-gray-300 uppercase font-semibold">Gain Attendu</Text>
@@ -581,94 +592,72 @@ export default function DashboardScreen() {
             </View>
 
             <Text className="text-xs font-semibold text-gray-600 mb-4">
-              Choisissez l'événement pour lequel vous souhaitez cotiser :
+              Choisissez l'événement créé par l'administration pour lequel vous souhaitez cotiser :
             </Text>
 
             {/* Event Options */}
             <View className="mb-5">
-              {/* Option 1 : Noël */}
-              <TouchableOpacity
-                onPress={() => setSelectedEventOption('noel')}
-                activeOpacity={0.8}
-                className={`p-4 rounded-2xl border flex-row items-center justify-between mb-3 ${
-                  selectedEventOption === 'noel'
-                    ? 'bg-blue-50 border-brand-primary shadow-sm'
-                    : 'bg-gray-50 border-gray-200'
-                }`}
-              >
-                <View className="flex-row items-center space-x-3">
-                  <View className="w-10 h-10 rounded-full bg-red-100 items-center justify-center">
-                    <Text className="text-lg">🎄</Text>
-                  </View>
-                  <View>
-                    <Text className="text-sm font-extrabold text-brand-dark">Option 1 : Noël</Text>
-                    <Text className="text-xs text-gray-500">Épargne Fêtes de Fin d'Année</Text>
-                  </View>
+              {isEventsLoading ? (
+                <ActivityIndicator size="small" color="#19A66A" className="my-4" />
+              ) : activeEventNatts.length === 0 ? (
+                <View className="bg-gray-50 rounded-2xl p-6 border border-gray-200/80 items-center justify-center my-2">
+                  <Text className="text-2xl mb-2">📅</Text>
+                  <Text className="text-sm font-bold text-gray-700 text-center mb-1">
+                    Aucun Natt Événement disponible
+                  </Text>
+                  <Text className="text-xs text-gray-500 text-center">
+                    Les campagnes événementielles créées par l'administrateur s'afficheront ici.
+                  </Text>
                 </View>
-                <View className={`w-5 h-5 rounded-full border items-center justify-center ${
-                  selectedEventOption === 'noel' ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
-                }`}>
-                  {selectedEventOption === 'noel' && <Text className="text-white text-xs font-bold">✓</Text>}
-                </View>
-              </TouchableOpacity>
-
-              {/* Option 2 : Tabaski */}
-              <TouchableOpacity
-                onPress={() => setSelectedEventOption('tabaski')}
-                activeOpacity={0.8}
-                className={`p-4 rounded-2xl border flex-row items-center justify-between mb-3 ${
-                  selectedEventOption === 'tabaski'
-                    ? 'bg-blue-50 border-brand-primary shadow-sm'
-                    : 'bg-gray-50 border-gray-200'
-                }`}
-              >
-                <View className="flex-row items-center space-x-3">
-                  <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center">
-                    <Text className="text-lg">🐑</Text>
-                  </View>
-                  <View>
-                    <Text className="text-sm font-extrabold text-brand-dark">Option 2 : Tabaski</Text>
-                    <Text className="text-xs text-gray-500">Préparation Aïd el-Kébir</Text>
-                  </View>
-                </View>
-                <View className={`w-5 h-5 rounded-full border items-center justify-center ${
-                  selectedEventOption === 'tabaski' ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
-                }`}>
-                  {selectedEventOption === 'tabaski' && <Text className="text-white text-xs font-bold">✓</Text>}
-                </View>
-              </TouchableOpacity>
-
-              {/* Option 3 : Magal */}
-              <TouchableOpacity
-                onPress={() => setSelectedEventOption('magal')}
-                activeOpacity={0.8}
-                className={`p-4 rounded-2xl border flex-row items-center justify-between mb-3 ${
-                  selectedEventOption === 'magal'
-                    ? 'bg-blue-50 border-brand-primary shadow-sm'
-                    : 'bg-gray-50 border-gray-200'
-                }`}
-              >
-                <View className="flex-row items-center space-x-3">
-                  <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center">
-                    <Text className="text-lg">🕌</Text>
-                  </View>
-                  <View>
-                    <Text className="text-sm font-extrabold text-brand-dark">Option 3 : Magal</Text>
-                    <Text className="text-xs text-gray-500">Grand Magal de Touba</Text>
-                  </View>
-                </View>
-                <View className={`w-5 h-5 rounded-full border items-center justify-center ${
-                  selectedEventOption === 'magal' ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
-                }`}>
-                  {selectedEventOption === 'magal' && <Text className="text-white text-xs font-bold">✓</Text>}
-                </View>
-              </TouchableOpacity>
+              ) : (
+                activeEventNatts.map((evt) => {
+                  const isSelected = (selectedEventId || activeEventNatts[0]?.eventId) === evt.eventId;
+                  return (
+                    <TouchableOpacity
+                      key={evt.eventId}
+                      onPress={() => setSelectedEventId(evt.eventId)}
+                      activeOpacity={0.8}
+                      className={`p-4 rounded-2xl border flex-row items-center justify-between mb-3 ${
+                        isSelected
+                          ? 'bg-blue-50 border-brand-primary shadow-sm'
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <View className="flex-row items-center space-x-3 flex-1 pr-2">
+                        <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center">
+                          <Text className="text-lg">🎉</Text>
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-sm font-extrabold text-brand-dark" numberOfLines={1}>
+                            {evt.title}
+                          </Text>
+                          <Text className="text-xs text-brand-primary font-bold">
+                            Cible: {evt.targetAmount.toLocaleString('fr-FR')} FCFA ({evt.installmentAmount.toLocaleString('fr-FR')} FCFA / {evt.frequency})
+                          </Text>
+                          {evt.description ? (
+                            <Text className="text-[11px] text-gray-500 mt-0.5" numberOfLines={1}>
+                              {evt.description}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                      <View className={`w-5 h-5 rounded-full border items-center justify-center ${
+                        isSelected ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <Text className="text-white text-xs font-bold">✓</Text>}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </View>
 
             <TouchableOpacity
               onPress={handleJoinSubmit}
-              disabled={joinTontineMutation.isPending}
-              className="w-full bg-brand-primary active:bg-brand-primaryHover py-4 rounded-2xl items-center shadow-md shadow-blue-500/25"
+              disabled={joinTontineMutation.isPending || activeEventNatts.length === 0}
+              className={`w-full py-4 rounded-2xl items-center shadow-md ${
+                activeEventNatts.length === 0 ? 'bg-gray-300' : 'bg-brand-primary active:bg-brand-primaryHover shadow-blue-500/25'
+              }`}
             >
               {joinTontineMutation.isPending ? (
                 <ActivityIndicator color="#FFFFFF" />

@@ -143,6 +143,22 @@ export class AdminPayoutsController {
       result,
     };
   }
+
+  @Post('override-payout-date')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Accorder une dérogation de date de prise à un client (même sans les 70%)' })
+  async overridePayoutDate(@Body() dto: { userNattId: string; customPayoutDate: string; grantExemption?: boolean }) {
+    const updated = await this.tontineService.overrideUserNattPayoutDate(
+      dto.userNattId,
+      dto.customPayoutDate,
+      dto.grantExemption ?? true
+    );
+    return {
+      success: true,
+      message: `Dérogation accordée : Date de prise mise à jour au ${dto.customPayoutDate} pour la souscription "${updated.title}".`,
+      userNatt: updated,
+    };
+  }
 }
 
 @ApiTags('Admin - Trésorerie Centralisée')

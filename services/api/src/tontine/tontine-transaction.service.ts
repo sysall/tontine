@@ -482,6 +482,37 @@ export class TontineTransactionService {
     );
   }
 
+  /**
+   * Admin: Override payout date / grant exemption for a user subscription
+   */
+  async overrideUserNattPayoutDate(
+    userNattId: string,
+    customPayoutDate: string,
+    grantExemption: boolean = true
+  ): Promise<UserNatt> {
+    const userNatt = this.userNatts.get(userNattId);
+    if (!userNatt) {
+      throw new NotFoundException(`Souscription UserNatt ${userNattId} introuvable.`);
+    }
+
+    userNatt.eventDueDate = customPayoutDate;
+    if (grantExemption) {
+      userNatt.payoutEligible = true;
+      userNatt.payoutStatus = 'PENDING';
+      userNatt.status = 'PAYOUT_UNLOCKED';
+    }
+    userNatt.updatedAt = new Date().toISOString();
+
+    this.userNatts.set(userNattId, userNatt);
+
+    this.firestoreService.userNatts().doc(userNattId).set(userNatt, { merge: true }).catch(err => {
+      this.logger.error(`Failed to update payout date override for ${userNattId} in Firestore: ${err.message}`);
+    });
+
+    this.logger.log(`[ADMIN EXEMPTION] Override payout date for UserNatt ${userNattId} set to ${customPayoutDate} (Exemption: ${grantExemption})`);
+    return userNatt;
+  }
+
   // --- TREASURY & TRANSACTION QUERY METHODS ---
 
   getTreasuryVault(): Treasury {

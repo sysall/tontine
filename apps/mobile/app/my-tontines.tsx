@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TontineIcon } from '../components/Icons';
+import { TontineIcon, BellIcon } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 import { useDashboardSummary } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 
@@ -25,6 +26,7 @@ export interface ExtendedTontineItem extends ActiveTontineItem {
 export default function MyTontinesScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const unreadNotifsCount = useNotificationStore((state) => state.unreadCount());
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -84,7 +86,18 @@ export default function MyTontinesScreen() {
           </Text>
         </View>
 
-        <View className="w-10" />
+        <TouchableOpacity
+          onPress={() => router.push('/notifications')}
+          activeOpacity={0.7}
+          className="w-10 h-10 items-center justify-center relative"
+        >
+          <BellIcon size={22} color="#173F73" />
+          {unreadNotifsCount > 0 && (
+            <View className="absolute top-1 right-1 bg-red-500 min-w-[16px] h-[16px] rounded-full items-center justify-center px-1">
+              <Text className="text-[9px] font-black text-white">{unreadNotifsCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Main Content */}

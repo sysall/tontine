@@ -105,4 +105,57 @@ export const authApi = {
 
     return data;
   },
+
+  updateProfileName: async (phoneNumber: string, fullName: string) => {
+    const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ phoneNumber, fullName }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errorMsg = Array.isArray(data.message)
+        ? data.message.join(', ')
+        : data.message || 'Échec de la mise à jour du profil';
+      throw new Error(errorMsg);
+    }
+
+    return data;
+  },
+
+  updatePaymentMethod: async (
+    phoneNumber: string,
+    defaultPaymentProvider: 'wave' | 'orange_money',
+    paymentPhoneNumber: string,
+  ) => {
+    const response = await fetch(`${API_BASE_URL}/auth/update-payment-method`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        phoneNumber,
+        defaultPaymentProvider,
+        paymentPhoneNumber,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errorMsg = Array.isArray(data.message)
+        ? data.message.join(', ')
+        : data.message || 'Échec de la mise à jour du moyen de paiement';
+      throw new Error(errorMsg);
+    }
+
+    return data;
+  },
 };
+

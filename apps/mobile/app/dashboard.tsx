@@ -37,6 +37,11 @@ import {
   SparklesIcon,
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { registerForPushNotificationsAsync } from '../services/notificationService';
+import { authApi } from '../api/authApi';
+import { db, auth } from '../config/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { OFFICIAL_OFFERS, OfficialOffer, OfficialTier, TransactionItem, ActiveTontineItem, EventNattItem } from '../api/tontineApi';
 import {
   useDashboardSummary,
@@ -52,11 +57,13 @@ type TxFilterType = 'all' | 'contribution' | 'payout';
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, isAuthenticated, updatePaymentMethod, logout } = useAuthStore();
+  const unreadNotifsCount = useNotificationStore((state) => state.unreadCount());
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
       router.replace('/login');
     }
+    registerForPushNotificationsAsync();
   }, [isAuthenticated, user, router]);
 
   // Active Bottom Tab State
@@ -177,7 +184,7 @@ export default function DashboardScreen() {
     Alert.alert('Vérification KYC', 'Votre pièce d\'identité a été validée avec succès par les services de conformité.');
   };
 
-  const handleSavePaymentMethod = () => {
+  const handleSavePaymentMethod = async () => {
     if (selectedProviderTab === 'card') {
       handleContactAdminWhatsApp();
       return;
@@ -188,10 +195,33 @@ export default function DashboardScreen() {
       return;
     }
 
-    updatePaymentMethod(selectedProviderTab, paymentPhoneInput);
-    setIsPaymentModalOpen(false);
-    const providerName = selectedProviderTab === 'wave' ? 'Wave Sénégal' : 'Orange Money';
-    Alert.alert('Moyen de Paiement Enregistré !', `${providerName} configuré avec le numéro ${paymentPhoneInput}.`);
+    const provider = selectedProviderTab;
+    const phone = paymentPhoneInput.trim();
+    const userPhone = user?.phoneNumber || user?.paymentPhoneNumber || '+221771234567';
+
+    try {
+      await authApi.updatePaymentMethod(userPhone, provider, phone);
+
+      if (db && auth?.currentUser?.uid) {
+        try {
+          const userDocRef = doc(db, 'users', auth.currentUser.uid);
+          await setDoc(userDocRef, { defaultPaymentProvider: provider, paymentPhoneNumber: phone, updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (fErr) {
+          console.warn('Erreur mise à jour SDK Firestore payment method:', fErr);
+        }
+      }
+
+      updatePaymentMethod(provider, phone);
+      setIsPaymentModalOpen(false);
+      const providerName = provider === 'wave' ? 'Wave Sénégal' : 'Orange Money';
+      Alert.alert('Moyen de Paiement Enregistré ! ✅', `${providerName} configuré avec le numéro ${phone} dans Firestore.`);
+    } catch (err: any) {
+      console.warn('Fallback mise à jour moyen de paiement:', err?.message || err);
+      updatePaymentMethod(provider, phone);
+      setIsPaymentModalOpen(false);
+      const providerName = provider === 'wave' ? 'Wave Sénégal' : 'Orange Money';
+      Alert.alert('Moyen de Paiement Enregistré !', `${providerName} configuré avec le numéro ${phone}.`);
+    }
   };
 
   const handleContactAdminWhatsApp = () => {
@@ -238,6 +268,20 @@ export default function DashboardScreen() {
               {user?.fullName || user?.phoneNumber || 'Membre'}
             </Text>
           </View>
+
+          {/* Bell Icon Notification Button */}
+          <TouchableOpacity
+            onPress={() => router.push('/notifications')}
+            activeOpacity={0.7}
+            className="w-10 h-10 items-center justify-center relative"
+          >
+            <BellIcon size={22} color="#173F73" />
+            {unreadNotifsCount > 0 && (
+              <View className="absolute top-1 right-1 bg-red-500 min-w-[16px] h-[16px] rounded-full items-center justify-center px-1">
+                <Text className="text-[9px] font-black text-white">{unreadNotifsCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Official Brand Hero Balance Card */}
@@ -564,12 +608,13 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={handleConfirmSubscription}
               disabled={subscribeOfferMutation.isPending}
-              className="w-full bg-brand-primary active:bg-brand-primaryHover py-4 rounded-2xl items-center shadow-md shadow-blue-500/25"
+              activeOpacity={0.85}
+              className="w-full bg-[#173F73] active:bg-[#1A4A82] py-4 rounded-2xl items-center shadow-md border border-[#19A66A]/30"
             >
               {subscribeOfferMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="#19A66A" />
               ) : (
-                <Text className="text-base font-black text-white uppercase tracking-wider">
+                <Text className="text-base font-black text-[#19A66A] uppercase tracking-wider">
                   CONFIRMER MA SOUSCRIPTION
                 </Text>
               )}
@@ -655,15 +700,22 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={handleJoinSubmit}
               disabled={joinTontineMutation.isPending || activeEventNatts.length === 0}
+              activeOpacity={0.85}
               className={`w-full py-4 rounded-2xl items-center shadow-md ${
-                activeEventNatts.length === 0 ? 'bg-gray-300' : 'bg-brand-primary active:bg-brand-primaryHover shadow-blue-500/25'
+                activeEventNatts.length === 0
+                  ? 'bg-gray-300'
+                  : 'bg-[#173F73] active:bg-[#1A4A82] border border-[#19A66A]/30'
               }`}
             >
               {joinTontineMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="#19A66A" />
               ) : (
-                <Text className="text-base font-black text-white uppercase tracking-wider">
-                  REJOINDRE CET ÉVÉNEMENT
+                <Text
+                  className={`text-base font-black uppercase tracking-wider ${
+                    activeEventNatts.length === 0 ? 'text-gray-500' : 'text-[#19A66A]'
+                  }`}
+                >
+                  CONFIRMER MA SOUSCRIPTION
                 </Text>
               )}
             </TouchableOpacity>

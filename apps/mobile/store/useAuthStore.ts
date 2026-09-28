@@ -14,6 +14,7 @@ interface AuthState {
   isAuthenticated: boolean;
   setAuth: (user: UserProfile, token: string) => void;
   updatePaymentMethod: (provider: 'wave' | 'orange_money', phone: string) => void;
+  updateProfileName: (fullName: string) => void;
   logout: () => void;
 }
 
@@ -29,6 +30,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     set((state) => ({
       user: state.user
         ? { ...state.user, defaultPaymentProvider: provider, paymentPhoneNumber: phone }
+        : null,
+    })),
+
+  updateProfileName: (fullName: string) =>
+    set((state) => ({
+      user: state.user
+        ? { ...state.user, fullName }
         : null,
     })),
 

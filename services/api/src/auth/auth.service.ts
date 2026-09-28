@@ -95,6 +95,130 @@ export class AuthService {
     }
   }
 
+  async updateProfileName(phoneOrUid?: string, fullName?: string) {
+    if (!fullName || fullName.trim().length === 0) {
+      throw new BadRequestException('Le nom complet est requis.');
+    }
+
+    const trimmedName = fullName.trim();
+    const now = new Date().toISOString();
+    const updatePayload = {
+      fullName: trimmedName,
+      updatedAt: now,
+    };
+
+    if (phoneOrUid) {
+      const normalizedPhone = this.normalizePhoneNumber(phoneOrUid);
+
+      const userRef = this.firestoreService.users().doc(phoneOrUid);
+      const docSnap = await userRef.get();
+
+      if (docSnap.exists) {
+        await userRef.set(updatePayload, { merge: true });
+        this.logger.log(`Updated fullName for doc ${phoneOrUid} in Firestore: "${trimmedName}"`);
+      }
+
+      const snapshot = await this.firestoreService.users()
+        .where('phoneNumber', '==', normalizedPhone)
+        .get();
+
+      if (!snapshot.empty) {
+        for (const doc of snapshot.docs) {
+          await doc.ref.set(updatePayload, { merge: true });
+          this.logger.log(`Updated fullName for doc ${doc.id} in Firestore: "${trimmedName}"`);
+        }
+      }
+
+      if (!docSnap.exists && snapshot.empty) {
+        const newUserDocRef = this.firestoreService.users().doc(normalizedPhone);
+        await newUserDocRef.set({
+          uid: normalizedPhone,
+          phoneNumber: normalizedPhone,
+          fullName: trimmedName,
+          role: 'MEMBER',
+          isVerified: true,
+          balanceFcfa: 0,
+          createdAt: now,
+          updatedAt: now,
+        }, { merge: true });
+        this.logger.log(`Created new user doc ${normalizedPhone} in Firestore with fullName: "${trimmedName}"`);
+      }
+    } else {
+      const allUsers = await this.firestoreService.users().get();
+      for (const doc of allUsers.docs) {
+        await doc.ref.set(updatePayload, { merge: true });
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Nom mis à jour avec succès dans Firestore',
+    };
+  }
+
+  async updatePaymentMethod(phoneOrUid?: string, defaultPaymentProvider?: 'wave' | 'orange_money', paymentPhoneNumber?: string) {
+    if (!defaultPaymentProvider || !paymentPhoneNumber) {
+      throw new BadRequestException('Le moyen de paiement et le numéro de téléphone associés sont requis.');
+    }
+
+    const now = new Date().toISOString();
+    const normalizedPaymentPhone = this.normalizePhoneNumber(paymentPhoneNumber);
+    const updatePayload = {
+      defaultPaymentProvider,
+      paymentPhoneNumber: normalizedPaymentPhone,
+      updatedAt: now,
+    };
+
+    if (phoneOrUid) {
+      const normalizedPhone = this.normalizePhoneNumber(phoneOrUid);
+
+      const userRef = this.firestoreService.users().doc(phoneOrUid);
+      const docSnap = await userRef.get();
+
+      if (docSnap.exists) {
+        await userRef.set(updatePayload, { merge: true });
+        this.logger.log(`Updated payment method for doc ${phoneOrUid} in Firestore: ${defaultPaymentProvider} (${normalizedPaymentPhone})`);
+      }
+
+      const snapshot = await this.firestoreService.users()
+        .where('phoneNumber', '==', normalizedPhone)
+        .get();
+
+      if (!snapshot.empty) {
+        for (const doc of snapshot.docs) {
+          await doc.ref.set(updatePayload, { merge: true });
+          this.logger.log(`Updated payment method for doc ${doc.id} in Firestore: ${defaultPaymentProvider} (${normalizedPaymentPhone})`);
+        }
+      }
+
+      if (!docSnap.exists && snapshot.empty) {
+        const newUserDocRef = this.firestoreService.users().doc(normalizedPhone);
+        await newUserDocRef.set({
+          uid: normalizedPhone,
+          phoneNumber: normalizedPhone,
+          defaultPaymentProvider,
+          paymentPhoneNumber: normalizedPaymentPhone,
+          role: 'MEMBER',
+          isVerified: true,
+          balanceFcfa: 0,
+          createdAt: now,
+          updatedAt: now,
+        }, { merge: true });
+        this.logger.log(`Created new user doc ${normalizedPhone} in Firestore with payment method`);
+      }
+    } else {
+      const allUsers = await this.firestoreService.users().get();
+      for (const doc of allUsers.docs) {
+        await doc.ref.set(updatePayload, { merge: true });
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Moyen de paiement enregistré avec succès dans Firestore',
+    };
+  }
+
   async requestOtp(dto: RequestOtpDto) {
     const normalizedPhone = this.normalizePhoneNumber(dto.phoneNumber);
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();

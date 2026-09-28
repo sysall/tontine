@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { PayoutModal } from './components/PayoutModal';
@@ -14,17 +14,17 @@ import { Natts } from './pages/Natts';
 import { Cotisations } from './pages/Cotisations';
 
 import { 
-  INITIAL_TREASURY, 
-  MOCK_CLIENTS, 
-  INITIAL_SUBSCRIPTIONS, 
-  INITIAL_COTISATIONS, 
-  INITIAL_PAYOUT_HISTORY,
-  INITIAL_EVENT_NATTS,
-  INITIAL_KYC_RECORDS,
-  INITIAL_OVERDUE_CONTRIBUTIONS
-} from './data/mockData';
+  TreasuryMetrics,
+  Client,
+  ClientNattSubscription, 
+  CotisationTransaction, 
+  PayoutRecord, 
+  EventNattItem, 
+  KycRecord, 
+  OverdueContribution 
+} from './types';
 
-import { ClientNattSubscription, PayoutRecord, EventNattItem, KycRecord, OverdueContribution } from './types';
+import { adminApi, BackofficeDataResponse } from './api/adminApi';
 
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -32,19 +32,65 @@ export const App: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [treasury, setTreasury] = useState(INITIAL_TREASURY);
-  const [clients, setClients] = useState(MOCK_CLIENTS);
-  const [subscriptions, setSubscriptions] = useState(INITIAL_SUBSCRIPTIONS);
-  const [cotisations, setCotisations] = useState(INITIAL_COTISATIONS);
-  const [payoutHistory, setPayoutHistory] = useState(INITIAL_PAYOUT_HISTORY);
-  const [eventNattsList, setEventNattsList] = useState<EventNattItem[]>(INITIAL_EVENT_NATTS);
-  const [kycRecords, setKycRecords] = useState<KycRecord[]>(INITIAL_KYC_RECORDS);
-  const [overdueContributions, setOverdueContributions] = useState<OverdueContribution[]>(INITIAL_OVERDUE_CONTRIBUTIONS);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const [treasury, setTreasury] = useState<TreasuryMetrics>({
+    totalBalanceFcfa: 0,
+    totalCollectedFcfa: 0,
+    totalPaidOutFcfa: 0,
+    pendingPayoutsCount: 0,
+    pendingPayoutsTotalFcfa: 0,
+    activeClientsCount: 0,
+    activeSubscriptionsCount: 0,
+    solvencyRatioPercent: 0,
+  });
+  const [clients, setClients] = useState<Client[]>([]);
+  const [subscriptions, setSubscriptions] = useState<ClientNattSubscription[]>([]);
+  const [cotisations, setCotisations] = useState<CotisationTransaction[]>([]);
+  const [payoutHistory, setPayoutHistory] = useState<PayoutRecord[]>([]);
+  const [eventNattsList, setEventNattsList] = useState<EventNattItem[]>([]);
+  const [kycRecords, setKycRecords] = useState<KycRecord[]>([]);
+  const [overdueContributions, setOverdueContributions] = useState<OverdueContribution[]>([]);
 
   // Modal States
   const [selectedSubForPayout, setSelectedSubForPayout] = useState<ClientNattSubscription | null>(null);
   const [selectedKycRecord, setSelectedKycRecord] = useState<KycRecord | null>(null);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState<boolean>(false);
+
+  // Helper to apply data response from API
+  const applyDataResponse = (data: BackofficeDataResponse) => {
+    if (data.treasury) setTreasury(data.treasury);
+    if (data.clients) setClients(data.clients);
+    if (data.subscriptions) setSubscriptions(data.subscriptions);
+    if (data.cotisations) setCotisations(data.cotisations);
+    if (data.payoutHistory) setPayoutHistory(data.payoutHistory);
+    if (data.eventNattsList) setEventNattsList(data.eventNattsList);
+    if (data.kycRecords) setKycRecords(data.kycRecords);
+    if (data.overdueContributions) setOverdueContributions(data.overdueContributions);
+  };
+
+  // Fetch initial data from API
+  const loadBackofficeData = async (isManualRefresh = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
+    else setIsLoading(true);
+
+    try {
+      const data = await adminApi.fetchBackofficeData();
+      applyDataResponse(data);
+    } catch (error) {
+      console.error('Error connecting to NestJS API:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadBackofficeData();
+    }
+  }, [isAuthenticated]);
 
   // Auth Handlers
   const handleLoginSuccess = () => {
@@ -67,152 +113,69 @@ export const App: React.FC = () => {
   const pendingKycCount = kycRecords.filter(k => k.status === 'PENDING_MANUAL_CHECK').length;
 
   // Action: Confirming payout at 70% threshold
-  const handleConfirmPayout = (subscriptionId: string, provider: 'Wave' | 'Orange Money' | 'Virement') => {
-    const targetSub = subscriptions.find(s => s.id === subscriptionId);
-    if (!targetSub) return;
-
-    const payoutAmount = targetSub.targetAmountFcfa;
-    const txRef = `${provider === 'Wave' ? 'WV' : provider === 'Orange Money' ? 'OM' : 'VIR'}-PAYOUT-${Math.floor(100000 + Math.random() * 900000)}`;
-    const nowStr = `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-
-    // 1. Update Subscriptions status
-    setSubscriptions(prev => prev.map(s => {
-      if (s.id === subscriptionId) {
-        return {
-          ...s,
-          status: 'PAID_OUT',
-          isEligibleForPayout: false,
-          payoutDate: nowStr,
-          payoutTxRef: txRef,
-        };
-      }
-      return s;
-    }));
-
-    // 2. Update Treasury Metrics (Deduct from balance, add to total paid out)
-    setTreasury(prev => ({
-      ...prev,
-      totalBalanceFcfa: prev.totalBalanceFcfa - payoutAmount,
-      totalPaidOutFcfa: prev.totalPaidOutFcfa + payoutAmount,
-      pendingPayoutsCount: Math.max(0, prev.pendingPayoutsCount - 1),
-    }));
-
-    // 3. Add to Payout History
-    const newRecord: PayoutRecord = {
-      id: `pay-${Date.now()}`,
-      subscriptionId,
-      clientName: targetSub.clientName,
-      clientPhone: targetSub.clientPhone,
-      nattTitle: targetSub.categoryTitle,
-      targetAmountFcfa: targetSub.targetAmountFcfa,
-      contributedAtPayoutFcfa: targetSub.contributedAmountFcfa,
-      progressAtPayoutPercent: targetSub.progressPercent,
-      payoutAmountFcfa: payoutAmount,
-      provider,
-      reference: txRef,
-      status: 'SUCCESS',
-      triggeredAt: nowStr,
-      processedAt: nowStr,
-      approvedBy: 'Admin Trésorerie',
-    };
-    setPayoutHistory(prev => [newRecord, ...prev]);
-
-    // Close Modal
-    setSelectedSubForPayout(null);
+  const handleConfirmPayout = async (subscriptionId: string, provider: 'Wave' | 'Orange Money' | 'Virement') => {
+    try {
+      const updatedData = await adminApi.processPayout(subscriptionId, provider);
+      applyDataResponse(updatedData);
+    } catch (err) {
+      console.error('Failed to confirm payout via API:', err);
+    } finally {
+      setSelectedSubForPayout(null);
+    }
   };
 
   // Action: Add custom Event Natt
-  const handleAddEventNatt = (newEvent: Omit<EventNattItem, 'id' | 'subscribersCount'>) => {
-    const newEventObj: EventNattItem = {
-      ...newEvent,
-      id: `evt-${Date.now()}`,
-      subscribersCount: 0,
-    };
-    setEventNattsList(prev => [newEventObj, ...prev]);
+  const handleAddEventNatt = async (newEvent: Omit<EventNattItem, 'id' | 'subscribersCount'>) => {
+    try {
+      const updatedData = await adminApi.addEventNatt(newEvent);
+      applyDataResponse(updatedData);
+    } catch (err) {
+      console.error('Failed to add event natt via API:', err);
+    }
   };
 
   // Action: Delete Event Natt
-  const handleDeleteEventNatt = (eventId: string) => {
-    setEventNattsList(prev => prev.filter(e => e.id !== eventId));
+  const handleDeleteEventNatt = async (eventId: string) => {
+    try {
+      const updatedData = await adminApi.deleteEventNatt(eventId);
+      applyDataResponse(updatedData);
+    } catch (err) {
+      console.error('Failed to delete event natt via API:', err);
+    }
   };
 
   // Action: Approve KYC
-  const handleApproveKyc = (kycId: string, notes?: string) => {
-    const nowStr = `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-    
-    // 1. Update KYC Record status
-    setKycRecords(prev => prev.map(k => {
-      if (k.id === kycId) {
-        return {
-          ...k,
-          status: 'VERIFIED',
-          adminNotes: notes || k.adminNotes,
-          verifiedAt: nowStr,
-          verifiedBy: 'Admin (Validation Manuelle OCR)',
-        };
-      }
-      return k;
-    }));
-
-    // 2. Update Client KYC Status
-    const targetKyc = kycRecords.find(k => k.id === kycId);
-    if (targetKyc) {
-      setClients(prev => prev.map(c => {
-        if (c.id === targetKyc.clientId || c.phone === targetKyc.clientPhone) {
-          return {
-            ...c,
-            kycStatus: 'VERIFIED',
-          };
-        }
-        return c;
-      }));
+  const handleApproveKyc = async (kycId: string, notes?: string) => {
+    try {
+      const updatedData = await adminApi.approveKyc(kycId, notes);
+      applyDataResponse(updatedData);
+    } catch (err) {
+      console.error('Failed to approve KYC via API:', err);
+    } finally {
+      setSelectedKycRecord(null);
     }
-
-    setSelectedKycRecord(null);
   };
 
   // Action: Reject KYC
-  const handleRejectKyc = (kycId: string, notes: string) => {
-    setKycRecords(prev => prev.map(k => {
-      if (k.id === kycId) {
-        return {
-          ...k,
-          status: 'REJECTED',
-          adminNotes: notes,
-        };
-      }
-      return k;
-    }));
-
-    const targetKyc = kycRecords.find(k => k.id === kycId);
-    if (targetKyc) {
-      setClients(prev => prev.map(c => {
-        if (c.id === targetKyc.clientId || c.phone === targetKyc.clientPhone) {
-          return {
-            ...c,
-            kycStatus: 'REJECTED',
-          };
-        }
-        return c;
-      }));
+  const handleRejectKyc = async (kycId: string, notes: string) => {
+    try {
+      const updatedData = await adminApi.rejectKyc(kycId, notes);
+      applyDataResponse(updatedData);
+    } catch (err) {
+      console.error('Failed to reject KYC via API:', err);
+    } finally {
+      setSelectedKycRecord(null);
     }
-
-    setSelectedKycRecord(null);
   };
 
   // Action: Send Overdue Reminder
-  const handleSendReminder = (overdueId: string) => {
-    const nowStr = `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-    setOverdueContributions(prev => prev.map(o => {
-      if (o.id === overdueId) {
-        return {
-          ...o,
-          status: 'REMINDED',
-          lastRemindedAt: nowStr,
-        };
-      }
-      return o;
-    }));
+  const handleSendReminder = async (overdueId: string) => {
+    try {
+      const updatedData = await adminApi.sendReminder(overdueId);
+      applyDataResponse(updatedData);
+    } catch (err) {
+      console.error('Failed to send reminder via API:', err);
+    }
   };
 
   return (
@@ -230,62 +193,68 @@ export const App: React.FC = () => {
         <Header 
           activeTab={activeTab}
           totalBalanceFcfa={treasury.totalBalanceFcfa}
-          onRefresh={() => {
-            // Simulated refresh indicator
-          }}
+          onRefresh={() => loadBackofficeData(true)}
           onLogout={handleLogout}
         />
 
         <div className="page-body">
-          {activeTab === 'dashboard' && (
-            <Dashboard 
-              treasury={treasury}
-              subscriptions={subscriptions}
-              cotisations={cotisations}
-              payoutHistory={payoutHistory}
-              onOpenPayoutModal={(sub) => setSelectedSubForPayout(sub)}
-              onNavigateToTab={(tab) => setActiveTab(tab)}
-            />
-          )}
+          {isLoading ? (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#173F73', fontWeight: 'bold' }}>
+              Chargement des données Trésorerie & Clients depuis l'API NestJS...
+            </div>
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
+                <Dashboard 
+                  treasury={treasury}
+                  subscriptions={subscriptions}
+                  cotisations={cotisations}
+                  payoutHistory={payoutHistory}
+                  onOpenPayoutModal={(sub) => setSelectedSubForPayout(sub)}
+                  onNavigateToTab={(tab) => setActiveTab(tab)}
+                />
+              )}
 
-          {activeTab === 'payouts' && (
-            <Versements 
-              subscriptions={subscriptions}
-              payoutHistory={payoutHistory}
-              onOpenPayoutModal={(sub) => setSelectedSubForPayout(sub)}
-            />
-          )}
+              {activeTab === 'payouts' && (
+                <Versements 
+                  subscriptions={subscriptions}
+                  payoutHistory={payoutHistory}
+                  onOpenPayoutModal={(sub) => setSelectedSubForPayout(sub)}
+                />
+              )}
 
-          {activeTab === 'kyc' && (
-            <Kyc 
-              kycRecords={kycRecords}
-              onOpenKycModal={(record) => setSelectedKycRecord(record)}
-            />
-          )}
+              {activeTab === 'kyc' && (
+                <Kyc 
+                  kycRecords={kycRecords}
+                  onOpenKycModal={(record) => setSelectedKycRecord(record)}
+                />
+              )}
 
-          {activeTab === 'clients' && (
-            <Clients 
-              clients={clients}
-              subscriptions={subscriptions}
-              onOpenPayoutModal={(sub) => setSelectedSubForPayout(sub)}
-            />
-          )}
+              {activeTab === 'clients' && (
+                <Clients 
+                  clients={clients}
+                  subscriptions={subscriptions}
+                  onOpenPayoutModal={(sub) => setSelectedSubForPayout(sub)}
+                />
+              )}
 
-          {activeTab === 'natts' && (
-            <Natts 
-              subscriptions={subscriptions}
-              eventNattsList={eventNattsList}
-              onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
-              onDeleteEventNatt={handleDeleteEventNatt}
-            />
-          )}
+              {activeTab === 'natts' && (
+                <Natts 
+                  subscriptions={subscriptions}
+                  eventNattsList={eventNattsList}
+                  onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
+                  onDeleteEventNatt={handleDeleteEventNatt}
+                />
+              )}
 
-          {activeTab === 'cotisations' && (
-            <Cotisations 
-              cotisations={cotisations}
-              overdueContributions={overdueContributions}
-              onSendReminder={handleSendReminder}
-            />
+              {activeTab === 'cotisations' && (
+                <Cotisations 
+                  cotisations={cotisations}
+                  overdueContributions={overdueContributions}
+                  onSendReminder={handleSendReminder}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

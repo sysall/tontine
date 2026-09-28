@@ -59,3 +59,48 @@ export class FirebaseLoginDto {
   @IsIn(['MEMBER', 'ADMIN'])
   role?: 'MEMBER' | 'ADMIN';
 }
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional({
+    description: 'Numéro de téléphone ou UID du membre',
+    example: '+221771234567',
+  })
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
+
+  @ApiProperty({
+    description: 'Nouveau prénom & nom du membre',
+    example: 'Fatou Sall',
+  })
+  @IsNotEmpty({ message: 'Le nom complet est requis' })
+  @IsString()
+  fullName: string;
+}
+
+export class UpdatePaymentMethodDto {
+  @ApiPropertyOptional({
+    description: 'Numéro de téléphone ou UID du membre',
+    example: '+221771234567',
+  })
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
+
+  @ApiProperty({
+    description: 'Moyen de paiement par défaut (wave ou orange_money)',
+    example: 'wave',
+  })
+  @IsNotEmpty()
+  @IsString()
+  @IsIn(['wave', 'orange_money'])
+  defaultPaymentProvider: 'wave' | 'orange_money';
+
+  @ApiProperty({
+    description: 'Numéro de téléphone rattaché au moyen de paiement',
+    example: '+221771234567',
+  })
+  @IsNotEmpty()
+  @IsString()
+  paymentPhoneNumber: string;
+}

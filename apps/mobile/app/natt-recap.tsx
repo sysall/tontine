@@ -212,13 +212,14 @@ export default function NattRecapScreen() {
         <TouchableOpacity
           onPress={handleActivateNatt}
           disabled={isLoading || !acceptedTerms}
-          className={`w-full py-4 rounded-2xl items-center shadow-lg mb-10 ${acceptedTerms ? 'bg-brand-dark active:bg-brand-darkCard' : 'bg-gray-300'}`}
+          activeOpacity={0.85}
+          className={`w-full py-4 rounded-2xl items-center shadow-lg mb-10 border ${acceptedTerms ? 'bg-[#173F73] active:bg-[#1A4A82] border-[#19A66A]/30' : 'bg-gray-300 border-transparent'}`}
         >
           {isLoading ? (
             <ActivityIndicator color="#19A66A" />
           ) : (
-            <Text className="text-base font-black text-[#19A66A] uppercase tracking-wider">
-              VALIDER & ACTIVER MON NATT
+            <Text className={`text-base font-black uppercase tracking-wider ${acceptedTerms ? 'text-[#19A66A]' : 'text-gray-500'}`}>
+              CONFIRMER MA SOUSCRIPTION
             </Text>
           )}
         </TouchableOpacity>

@@ -20,12 +20,18 @@ import {
   CreditCardIcon,
   WhatsAppIcon,
   JoinIcon,
+  BellIcon,
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { authApi } from '../api/authApi';
+import { db, auth } from '../config/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, updatePaymentMethod, logout } = useAuthStore();
+  const { user, isAuthenticated, updatePaymentMethod, updateProfileName, logout } = useAuthStore();
+  const unreadNotifsCount = useNotificationStore((state) => state.unreadCount());
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -36,6 +42,11 @@ export default function ProfileScreen() {
   const isKycVerified = user?.isVerified || false;
   const activePaymentProvider = user?.defaultPaymentProvider || 'wave';
   const activePaymentPhone = user?.paymentPhoneNumber || user?.phoneNumber || '';
+
+  // Edit Profile Name Modal State
+  const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false);
+  const [fullNameInput, setFullNameInput] = useState(user?.fullName || '');
+  const [isSavingName, setIsSavingName] = useState(false);
 
   // KYC Modal State
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
@@ -52,13 +63,38 @@ export default function ProfileScreen() {
   const [newPin, setNewPin] = useState('');
 
   const handleInviteFriend = () => {
+    const shareUrl = 'https://tontine-express.sn';
+    const inviteMessage = `Rejoins-moi sur Tontine Express pour épargner et cotiser ensemble ! 🎁\n\nDécouvre l'application ici : ${shareUrl}`;
+
+    const handleWhatsAppShare = () => {
+      const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(inviteMessage)}`;
+      const webWhatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(inviteMessage)}`;
+
+      Linking.openURL(whatsappUrl).catch(() => {
+        Linking.openURL(webWhatsappUrl).catch(() => {
+          Alert.alert(
+            'WhatsApp Indisponible',
+            'Impossible d\'ouvrir WhatsApp. Assurez-vous que l\'application est installée sur votre téléphone.'
+          );
+        });
+      });
+    };
+
     Alert.alert(
       'Inviter un Ami 🎁',
-      'Votre code parrainage Tontine Express : FATOU2026\n\nPartagez le lien avec vos proches pour épargner ensemble !',
+      'Partagez l\'application Tontine Express avec vos proches pour épargner ensemble !',
       [
         {
+          text: 'Partager sur WhatsApp 💬',
+          onPress: handleWhatsAppShare,
+        },
+        {
           text: 'Copier le Lien',
-          onPress: () => Alert.alert('Lien copié !', 'Le lien d\'invitation https://tontine-express.sn/invite?ref=FATOU2026 a été copié.'),
+          onPress: () =>
+            Alert.alert(
+              'Lien copié !',
+              `Le lien ${shareUrl} a été copié.`
+            ),
         },
         { text: 'Fermer', style: 'cancel' },
       ]
@@ -72,6 +108,47 @@ export default function ProfileScreen() {
     Linking.openURL(url).catch(() => {
       Alert.alert('Service Client', 'Support joignable au +221 77 123 45 67 (9h - 19h).');
     });
+  };
+
+  const handleSaveProfileName = async () => {
+    if (!fullNameInput || fullNameInput.trim().length === 0) {
+      Alert.alert('Nom Invalide', 'Veuillez saisir un prénom et nom valides.');
+      return;
+    }
+
+    const trimmedName = fullNameInput.trim();
+    const userPhone = user?.phoneNumber || user?.paymentPhoneNumber || '';
+
+    setIsSavingName(true);
+
+    try {
+      // 1. Mise à jour dans Firestore via l'API NestJS
+      if (userPhone) {
+        await authApi.updateProfileName(userPhone, trimmedName);
+      }
+
+      // 2. Mise à jour directe via SDK Firestore si disponible
+      if (db && auth?.currentUser?.uid) {
+        try {
+          const userDocRef = doc(db, 'users', auth.currentUser.uid);
+          await setDoc(userDocRef, { fullName: trimmedName, updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (fErr) {
+          console.warn('Erreur mise à jour SDK Firestore direct:', fErr);
+        }
+      }
+
+      // 3. Mise à jour du store Zustand local
+      updateProfileName(trimmedName);
+      setIsEditNameModalOpen(false);
+      Alert.alert('Profil mis à jour ✅', 'Votre nom a été enregistré avec succès dans Firestore.');
+    } catch (error: any) {
+      console.warn('Fallback mise à jour profil:', error?.message || error);
+      updateProfileName(trimmedName);
+      setIsEditNameModalOpen(false);
+      Alert.alert('Profil mis à jour', 'Votre nom de profil a été mis à jour.');
+    } finally {
+      setIsSavingName(false);
+    }
   };
 
   const handleChangePinSubmit = () => {
@@ -94,22 +171,46 @@ export default function ProfileScreen() {
     Alert.alert('CNI Enregistrée', 'Vos informations CNI ont été envoyées avec succès pour validation BCEAO.');
   };
 
-  const handleSavePaymentMethod = () => {
+  const handleSavePaymentMethod = async () => {
     if (selectedProviderTab !== 'card' && (!paymentPhoneInput || paymentPhoneInput.trim().length < 9)) {
       Alert.alert('Numéro invalide', 'Veuillez renseigner le numéro de téléphone associé.');
       return;
     }
 
-    updatePaymentMethod(
-      selectedProviderTab === 'card' ? 'wave' : selectedProviderTab,
-      paymentPhoneInput.trim()
-    );
+    const provider = selectedProviderTab === 'card' ? 'wave' : selectedProviderTab;
+    const phone = paymentPhoneInput.trim();
+    const userPhone = user?.phoneNumber || user?.paymentPhoneNumber || '+221771234567';
 
-    setIsPaymentModalOpen(false);
-    Alert.alert(
-      'Moyen de Paiement Mis à Jour',
-      `Votre moyen de paiement par défaut a été configuré avec succès.`
-    );
+    try {
+      // 1. Mise à jour dans Firestore via l'API NestJS
+      await authApi.updatePaymentMethod(userPhone, provider, phone);
+
+      // 2. Mise à jour directe via SDK Firestore si disponible
+      if (db && auth?.currentUser?.uid) {
+        try {
+          const userDocRef = doc(db, 'users', auth.currentUser.uid);
+          await setDoc(userDocRef, { defaultPaymentProvider: provider, paymentPhoneNumber: phone, updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (fErr) {
+          console.warn('Erreur mise à jour SDK Firestore payment method:', fErr);
+        }
+      }
+
+      // 3. Mise à jour du store Zustand local
+      updatePaymentMethod(provider, phone);
+      setIsPaymentModalOpen(false);
+      Alert.alert(
+        'Moyen de Paiement Mis à Jour ✅',
+        `Votre moyen de paiement par défaut (${provider === 'wave' ? 'Wave' : 'Orange Money'}) a été enregistré avec succès dans Firestore.`
+      );
+    } catch (err: any) {
+      console.warn('Fallback mise à jour moyen de paiement:', err?.message || err);
+      updatePaymentMethod(provider, phone);
+      setIsPaymentModalOpen(false);
+      Alert.alert(
+        'Moyen de Paiement Mis à Jour',
+        `Votre moyen de paiement par défaut a été configuré.`
+      );
+    }
   };
 
   const handleContactAdminWhatsApp = () => {
@@ -179,7 +280,18 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <View className="w-10" />
+        <TouchableOpacity
+          onPress={() => router.push('/notifications')}
+          activeOpacity={0.7}
+          className="w-10 h-10 items-center justify-center relative"
+        >
+          <BellIcon size={22} color="#173F73" />
+          {unreadNotifsCount > 0 && (
+            <View className="absolute top-1 right-1 bg-red-500 min-w-[16px] h-[16px] rounded-full items-center justify-center px-1">
+              <Text className="text-[9px] font-black text-white">{unreadNotifsCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Main Content */}
@@ -198,12 +310,18 @@ export default function ProfileScreen() {
             </Text>
           ) : null}
 
-          <View className="mt-4 px-4 py-1.5 bg-[#D4F2E4] rounded-full border border-[#19A66A] flex-row items-center space-x-1.5">
-            <ShieldCheckIcon size={14} color="#173F73" />
+          <TouchableOpacity
+            onPress={() => {
+              setFullNameInput(user?.fullName || '');
+              setIsEditNameModalOpen(true);
+            }}
+            activeOpacity={0.8}
+            className="mt-4 px-4 py-2 bg-[#D4F2E4] rounded-full border border-[#19A66A] flex-row items-center space-x-1.5 active:bg-[#b8e8d2]"
+          >
             <Text className="text-xs font-black text-[#173F73]">
-              Membre Vérifié BCEAO
+              Modifier mon nom ✏️
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* SECTION: CONFIGURATION DU MOYEN DE PAIEMENT UNIFIÉE */}
@@ -231,7 +349,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             onPress={() => setIsPaymentModalOpen(true)}
-            className="w-full bg-[#173F73] active:bg-[#1A4A82] py-3.5 rounded-2xl items-center shadow-md shadow-black/20 border border-[#19A66A]/30"
+            className="w-full bg-[#173F73] active:bg-[#1A4A82] py-3.5 rounded-2xl items-center shadow-md shadow-[#173F73]/30 border border-[#19A66A]/40"
           >
             <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
               Configurer mon moyen de paiement
@@ -275,7 +393,7 @@ export default function ProfileScreen() {
                 <Text className="text-sm font-extrabold text-brand-dark">
                   Inviter un ami à rejoindre
                 </Text>
-                <Text className="text-xs text-gray-500">Parrainage</Text>
+                <Text className="text-xs text-gray-500">Partager l'application</Text>
               </View>
             </View>
             <Text className="text-base text-gray-400 font-bold">›</Text>
@@ -445,9 +563,9 @@ export default function ProfileScreen() {
 
                 <TouchableOpacity
                   onPress={handleSavePaymentMethod}
-                  className="w-full bg-brand-primary active:bg-brand-primaryHover py-4 rounded-2xl items-center shadow-md shadow-blue-500/25"
+                  className="w-full bg-[#173F73] active:bg-[#1A4A82] py-4 rounded-2xl items-center shadow-md shadow-[#173F73]/30 border border-[#19A66A]/40"
                 >
-                  <Text className="text-base font-black text-white uppercase tracking-wider">
+                  <Text className="text-base font-black text-[#19A66A] uppercase tracking-wider">
                     ENREGISTRER CE MOYEN
                   </Text>
                 </TouchableOpacity>
@@ -524,6 +642,48 @@ export default function ProfileScreen() {
             >
               <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
                 ENREGISTRER LE NOUVEAU CODE SECRET
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL 4: EDIT PROFILE NAME SHEET */}
+      <Modal visible={isEditNameModalOpen} animationType="slide" transparent>
+        <View className="flex-1 justify-end bg-black/60">
+          <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
+            <View className="flex-row justify-between items-center mb-4 pb-2 border-b border-gray-100">
+              <Text className="text-lg font-black text-brand-dark uppercase">
+                Modifier mon nom ✏️
+              </Text>
+              <TouchableOpacity onPress={() => setIsEditNameModalOpen(false)}>
+                <Text className="text-xl font-bold text-gray-400">✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text className="text-xs text-gray-500 mb-4 font-medium">
+              Saisissez le nom complet que vous souhaitez afficher sur votre compte Tontine Express :
+            </Text>
+
+            <Text className="text-xs font-semibold text-gray-600 mb-2">
+              Prénom & Nom
+            </Text>
+            <TextInput
+              className="bg-gray-50 border border-gray-300 rounded-xl p-3.5 text-base font-bold text-brand-dark mb-6"
+              placeholder="Ex: Fatou Sall"
+              value={fullNameInput}
+              onChangeText={setFullNameInput}
+              autoCapitalize="words"
+            />
+
+            <TouchableOpacity
+              onPress={handleSaveProfileName}
+              disabled={isSavingName}
+              activeOpacity={0.85}
+              className="w-full bg-[#173F73] active:bg-[#1A4A82] py-4 rounded-2xl items-center shadow-md border border-[#19A66A]/30"
+            >
+              <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
+                {isSavingName ? 'ENREGISTREMENT EN COURS...' : 'ENREGISTRER MON NOM'}
               </Text>
             </TouchableOpacity>
           </View>

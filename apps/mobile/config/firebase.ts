@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getAuth, browserLocalPersistence, inMemoryPersistence } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import * as FirebaseAuth from 'firebase/auth';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +15,13 @@ const firebaseConfig = {
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+let firestoreDb: any = null;
+try {
+  firestoreDb = getFirestore(app);
+} catch (e) {
+  console.warn('Erreur de chargement Firestore JS SDK:', e);
+}
 
 const getAuthPersistence = () => {
   if (Platform.OS === 'web') {
@@ -35,5 +43,6 @@ try {
   authInstance = getAuth(app);
 }
 
+export const db = firestoreDb;
 export const auth = authInstance;
 export default app;

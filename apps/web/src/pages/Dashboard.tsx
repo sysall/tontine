@@ -32,6 +32,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onNavigateToTab,
 }) => {
   const eligibleSubscriptions = subscriptions.filter(s => s.status === 'ELIGIBLE_PAYOUT');
+  const classiqueCount = subscriptions.filter(s => s.category === 'classique').length;
+  const tekkTeguiCount = subscriptions.filter(s => s.category === 'tekk_tegui').length;
+  const evenementCount = subscriptions.filter(s => s.category === 'evenement').length;
 
   return (
     <div>
@@ -91,7 +94,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           subtitle="Compte unique Tontine Express"
           icon={Landmark}
           variant="emerald"
-          trend="+14.2% ce mois"
+          trend={`Ratio de solvabilité: ${treasury.solvencyRatioPercent}%`}
         />
 
         <KPICard
@@ -199,7 +202,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 Épargne périodique fixe (250k - 3M FCFA). Retrait à 70% de cotisation.
               </div>
               <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', fontWeight: 700 }}>
-                185 Souscriptions actives
+                {classiqueCount} Souscription{classiqueCount > 1 ? 's' : ''} active{classiqueCount > 1 ? 's' : ''}
               </div>
             </div>
 
@@ -213,7 +216,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 Progression rapide journalière pour projets/équipements.
               </div>
               <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', fontWeight: 700 }}>
-                240 Souscriptions actives
+                {tekkTeguiCount} Souscription{tekkTeguiCount > 1 ? 's' : ''} active{tekkTeguiCount > 1 ? 's' : ''}
               </div>
             </div>
 
@@ -227,7 +230,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 Épargne ciblée : Tabaski, Korité, Magal, Rentrée scolaire.
               </div>
               <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', fontWeight: 700 }}>
-                155 Souscriptions actives
+                {evenementCount} Souscription{evenementCount > 1 ? 's' : ''} active{evenementCount > 1 ? 's' : ''}
               </div>
             </div>
           </div>

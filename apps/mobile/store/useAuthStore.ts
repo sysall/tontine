@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 
 export interface UserProfile {
+  uid?: string;
+  id?: string;
   phoneNumber: string;
   fullName?: string;
   isVerified: boolean;

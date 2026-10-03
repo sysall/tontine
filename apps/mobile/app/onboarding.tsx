@@ -13,8 +13,8 @@ const SLIDES = [
   {
     id: 'slide-1',
     title: "L'UNION FAIT LA FORCE !",
-    subtitle: 'Créez des coffres groupés et tontines avec vos proches en toute simplicité.',
-    badge: 'Coffres Groupés',
+    subtitle: 'Participez à différents types de tontines en toute simplicité.',
+    badge: 'Tontines',
   },
   {
     id: 'slide-2',
@@ -33,7 +33,7 @@ const SLIDES = [
 export default function OnboardingScreen() {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
-  
+
   const { currentSlideIndex, setSlideIndex, nextSlide, completeOnboarding } = useOnboardingStore();
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

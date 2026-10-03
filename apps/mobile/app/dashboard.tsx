@@ -6,9 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
-  TextInput,
   Alert,
-  Linking,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,32 +14,15 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TontineLogo } from '../components/TontineLogo';
 import {
-  HomeIcon,
-  TontineIcon,
-  UserIcon,
-  ShieldCheckIcon,
   BellIcon,
-  LogOutIcon,
   WalletIcon,
-  JoinIcon,
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
   ReceiptIcon,
-  CreditCardIcon,
-  WhatsAppIcon,
-  SmartphoneIcon,
-  SettingsIcon,
-  PlusIcon,
-  CalendarIcon,
-  BoltIcon,
-  SparklesIcon,
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { registerForPushNotificationsAsync } from '../services/notificationService';
-import { authApi } from '../api/authApi';
-import { db, auth } from '../config/firebase';
-import { doc, setDoc } from 'firebase/firestore';
 import { OFFICIAL_OFFERS, OfficialOffer, OfficialTier, TransactionItem, ActiveTontineItem, EventNattItem } from '../api/tontineApi';
 import {
   useDashboardSummary,
@@ -51,12 +32,11 @@ import {
   useJoinTontine,
 } from '../api/useTontine';
 
-type TabType = 'home' | 'tontines' | 'profile';
 type TxFilterType = 'all' | 'contribution' | 'payout';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, updatePaymentMethod, logout } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const unreadNotifsCount = useNotificationStore((state) => state.unreadCount());
 
   useEffect(() => {
@@ -65,9 +45,6 @@ export default function DashboardScreen() {
     }
     registerForPushNotificationsAsync();
   }, [isAuthenticated, user, router]);
-
-  // Active Bottom Tab State
-  const [activeTab, setActiveTab] = useState<TabType>('home');
 
   // Transaction Filter State
   const [txFilter, setTxFilter] = useState<TxFilterType>('all');
@@ -87,36 +64,12 @@ export default function DashboardScreen() {
   // Modals state
   const [selectedOfferModal, setSelectedOfferModal] = useState<OfficialOffer | null>(null);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-
-  // Payment Method Modal Form State ('wave' | 'orange_money' | 'card')
-  const [selectedProviderTab, setSelectedProviderTab] = useState<'wave' | 'orange_money' | 'card'>(
-    user?.defaultPaymentProvider || 'wave'
-  );
-  const [paymentPhoneInput, setPaymentPhoneInput] = useState(
-    user?.paymentPhoneNumber || user?.phoneNumber || ''
-  );
 
   // Selected Tier State for Subscription Modal
   const [selectedTier, setSelectedTier] = useState<OfficialTier | null>(null);
 
   // Natt Événement Selection State (Dynamic Event ID)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-
-  // KYC State
-  const [cniNumber, setCniNumber] = useState('');
-  const [isKycVerified, setIsKycVerified] = useState(true);
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/login');
-  };
-
-  const handleOpenSubscribeModal = (offer: OfficialOffer) => {
-    setSelectedOfferModal(offer);
-    setSelectedTier(offer.tiers[0] || null);
-  };
 
   const handleConfirmSubscription = () => {
     if (!selectedOfferModal || !selectedTier) {
@@ -141,6 +94,7 @@ export default function DashboardScreen() {
         tierId,
         amountFcfa: amountFcfa.toString(),
         frequency,
+        maxMembers: (selectedTier.maxMembers || (offerType === 'rotative' ? 4 : 10)).toString(),
         category: 'PERMANENT',
       },
     });
@@ -174,77 +128,15 @@ export default function DashboardScreen() {
     });
   };
 
-  const handleKycSubmit = () => {
-    if (!cniNumber || cniNumber.trim().length < 10) {
-      Alert.alert('Erreur KYC', 'Veuillez saisir un numéro de CNI / Passeport valide.');
-      return;
-    }
-    setIsKycVerified(true);
-    setIsKycModalOpen(false);
-    Alert.alert('Vérification KYC', 'Votre pièce d\'identité a été validée avec succès par les services de conformité.');
-  };
-
-  const handleSavePaymentMethod = async () => {
-    if (selectedProviderTab === 'card') {
-      handleContactAdminWhatsApp();
-      return;
-    }
-
-    if (!paymentPhoneInput || paymentPhoneInput.trim().length < 9) {
-      Alert.alert('Erreur', 'Veuillez saisir un numéro de téléphone valide.');
-      return;
-    }
-
-    const provider = selectedProviderTab;
-    const phone = paymentPhoneInput.trim();
-    const userPhone = user?.phoneNumber || user?.paymentPhoneNumber || '+221771234567';
-
-    try {
-      await authApi.updatePaymentMethod(userPhone, provider, phone);
-
-      if (db && auth?.currentUser?.uid) {
-        try {
-          const userDocRef = doc(db, 'users', auth.currentUser.uid);
-          await setDoc(userDocRef, { defaultPaymentProvider: provider, paymentPhoneNumber: phone, updatedAt: new Date().toISOString() }, { merge: true });
-        } catch (fErr) {
-          console.warn('Erreur mise à jour SDK Firestore payment method:', fErr);
-        }
-      }
-
-      updatePaymentMethod(provider, phone);
-      setIsPaymentModalOpen(false);
-      const providerName = provider === 'wave' ? 'Wave Sénégal' : 'Orange Money';
-      Alert.alert('Moyen de Paiement Enregistré ! ✅', `${providerName} configuré avec le numéro ${phone} dans Firestore.`);
-    } catch (err: any) {
-      console.warn('Fallback mise à jour moyen de paiement:', err?.message || err);
-      updatePaymentMethod(provider, phone);
-      setIsPaymentModalOpen(false);
-      const providerName = provider === 'wave' ? 'Wave Sénégal' : 'Orange Money';
-      Alert.alert('Moyen de Paiement Enregistré !', `${providerName} configuré avec le numéro ${phone}.`);
-    }
-  };
-
-  const handleContactAdminWhatsApp = () => {
-    const adminPhone = '221771234567';
-    const msg = encodeURIComponent(
-      'Bonjour Admin Tontine Express, je souhaite effectuer un retrait par carte bancaire / virement sur mon compte.'
-    );
-    const url = `https://wa.me/${adminPhone}?text=${msg}`;
-    Linking.openURL(url).catch(() => {
-      Alert.alert('WhatsApp', 'Impossible d\'ouvrir WhatsApp sur cet appareil.');
-    });
-  };
-
   const summary = dashboardData?.summary || {
     totalSavedFcfa: 0,
     nextPaymentFcfa: 0,
-    nextPaymentDueDate: 'Non définie',
+    nextPaymentDueDate: '',
     expectedPayoutFcfa: 0,
     myPayoutTurn: 0,
     activeTontinesCount: 0,
   };
 
-  const tontines = dashboardData?.tontines || [];
   const rawTransactions = txData?.transactions || [];
 
   const filteredTransactions = rawTransactions.filter((tx: TransactionItem) => {
@@ -252,9 +144,6 @@ export default function DashboardScreen() {
     if (txFilter === 'payout') return tx.type === 'payout';
     return true;
   });
-
-  const activePaymentProvider = user?.defaultPaymentProvider || 'wave';
-  const activePaymentPhone = user?.paymentPhoneNumber || user?.phoneNumber || '';
 
   return (
     <SafeAreaView className="flex-1 bg-brand-beige justify-between">
@@ -318,7 +207,9 @@ export default function DashboardScreen() {
                 <Text className="text-sm font-black text-[#19A66A]">
                   {summary.nextPaymentFcfa.toLocaleString('fr-FR')} FCFA
                 </Text>
-                <Text className="text-[10px] text-gray-300/80">Échéance: {summary.nextPaymentDueDate || 'Non définie'}</Text>
+                {summary.nextPaymentDueDate && summary.nextPaymentDueDate !== 'Non définie' ? (
+                  <Text className="text-[10px] text-gray-300/80">Échéance: {summary.nextPaymentDueDate}</Text>
+                ) : null}
               </View>
               <View className="items-end">
                 <Text className="text-[11px] text-gray-300 uppercase font-semibold">Gain Attendu</Text>
@@ -331,7 +222,7 @@ export default function DashboardScreen() {
           </LinearGradient>
         </View>
 
-        {/* ==================== 3D FINANCIAL ICONS QUICK ACTIONS GRID ==================== */}
+        {/* ==================== QUICK ACTIONS GRID ==================== */}
         <View className="my-5 bg-[#FBF9F4] rounded-[28px] p-[20px] border border-[#ECE7DA]">
           <Text className="text-[16px] font-bold text-[#2B3A2E] mb-[18px]">
             Services & actions rapides
@@ -571,7 +462,7 @@ export default function DashboardScreen() {
             </View>
 
             <Text className="text-xs text-gray-500 mb-4 font-medium">
-              Choisissez le pack ou l'objectif d'épargne adapté à votre rythme :
+              Choisissez le pack ou l'objectif de tontine adapté à votre rythme :
             </Text>
 
             {/* List of Tiers */}
@@ -662,11 +553,10 @@ export default function DashboardScreen() {
                       key={evt.eventId}
                       onPress={() => setSelectedEventId(evt.eventId)}
                       activeOpacity={0.8}
-                      className={`p-4 rounded-2xl border flex-row items-center justify-between mb-3 ${
-                        isSelected
-                          ? 'bg-blue-50 border-brand-primary shadow-sm'
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
+                      className={`p-4 rounded-2xl border flex-row items-center justify-between mb-3 ${isSelected
+                        ? 'bg-blue-50 border-brand-primary shadow-sm'
+                        : 'bg-gray-50 border-gray-200'
+                        }`}
                     >
                       <View className="flex-row items-center space-x-3 flex-1 pr-2">
                         <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center">
@@ -686,9 +576,8 @@ export default function DashboardScreen() {
                           ) : null}
                         </View>
                       </View>
-                      <View className={`w-5 h-5 rounded-full border items-center justify-center ${
-                        isSelected ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
-                      }`}>
+                      <View className={`w-5 h-5 rounded-full border items-center justify-center ${isSelected ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
+                        }`}>
                         {isSelected && <Text className="text-white text-xs font-bold">✓</Text>}
                       </View>
                     </TouchableOpacity>
@@ -701,19 +590,17 @@ export default function DashboardScreen() {
               onPress={handleJoinSubmit}
               disabled={joinTontineMutation.isPending || activeEventNatts.length === 0}
               activeOpacity={0.85}
-              className={`w-full py-4 rounded-2xl items-center shadow-md ${
-                activeEventNatts.length === 0
-                  ? 'bg-gray-300'
-                  : 'bg-[#173F73] active:bg-[#1A4A82] border border-[#19A66A]/30'
-              }`}
+              className={`w-full py-4 rounded-2xl items-center shadow-md ${activeEventNatts.length === 0
+                ? 'bg-gray-300'
+                : 'bg-[#173F73] active:bg-[#1A4A82] border border-[#19A66A]/30'
+                }`}
             >
               {joinTontineMutation.isPending ? (
                 <ActivityIndicator color="#19A66A" />
               ) : (
                 <Text
-                  className={`text-base font-black uppercase tracking-wider ${
-                    activeEventNatts.length === 0 ? 'text-gray-500' : 'text-[#19A66A]'
-                  }`}
+                  className={`text-base font-black uppercase tracking-wider ${activeEventNatts.length === 0 ? 'text-gray-500' : 'text-[#19A66A]'
+                    }`}
                 >
                   CONFIRMER MA SOUSCRIPTION
                 </Text>
@@ -781,7 +668,7 @@ export default function DashboardScreen() {
                   </View>
                   <View className="flex-row justify-between">
                     <Text className="text-xs text-gray-500">Statut :</Text>
-                    <Text className="text-xs font-extrabold text-emerald-700">SUCCÈS (Validé BCEAO ✓)</Text>
+                    <Text className="text-xs font-extrabold text-emerald-700">SUCCÈS</Text>
                   </View>
                 </View>
               </View>
@@ -795,151 +682,6 @@ export default function DashboardScreen() {
                 FERMER LE REÇU
               </Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* MODAL 4: KYC IDENTITY VERIFICATION SHEET */}
-      <Modal visible={isKycModalOpen} animationType="slide" transparent>
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
-            <View className="flex-row justify-between items-center mb-4 pb-2 border-b border-gray-100">
-              <Text className="text-xl font-black text-brand-dark uppercase">
-                Vérification d'Identité (KYC)
-              </Text>
-              <TouchableOpacity onPress={() => setIsKycModalOpen(false)}>
-                <Text className="text-xl font-bold text-gray-400">✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-xs text-gray-500 mb-4">
-              Conformément à la réglementation BCEAO, entrez votre numéro de Carte Nationale d'Identité (CNI) sénégalaise ou de Passeport :
-            </Text>
-
-            <Text className="text-xs font-semibold text-gray-600 mb-2">
-              Numéro de CNI / Passeport (13 chiffres)
-            </Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-300 rounded-xl p-3.5 text-lg font-bold text-brand-dark tracking-wider mb-5"
-              placeholder="1 757 1995 01234"
-              keyboardType="number-pad"
-              value={cniNumber}
-              onChangeText={setCniNumber}
-            />
-
-            <TouchableOpacity
-              onPress={handleKycSubmit}
-              className="w-full bg-brand-primary active:bg-brand-primaryHover py-4 rounded-2xl items-center shadow-md shadow-blue-500/25"
-            >
-              <Text className="text-base font-black text-white uppercase tracking-wider">
-                VALIDER MES INFORMATIONS
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* MODAL 5: UNIFIED PAYMENT METHOD CONFIGURATION SHEET (WAVE / OM / CARTE WHATSAPP) */}
-      <Modal visible={isPaymentModalOpen} animationType="slide" transparent>
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
-            <View className="flex-row justify-between items-center mb-4 pb-2 border-b border-gray-100">
-              <Text className="text-xl font-black text-brand-dark uppercase">
-                Moyen de Paiement & Retrait
-              </Text>
-              <TouchableOpacity onPress={() => setIsPaymentModalOpen(false)}>
-                <Text className="text-xl font-bold text-gray-400">✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-xs text-gray-500 mb-4 font-medium">
-              Sélectionnez l'option de paiement ou de retrait souhaitée :
-            </Text>
-
-            {/* 3-Tab Choice Selector */}
-            <View className="flex-row space-x-2 mb-5">
-              {/* Tab 1: Wave */}
-              <TouchableOpacity
-                onPress={() => setSelectedProviderTab('wave')}
-                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${selectedProviderTab === 'wave'
-                  ? 'bg-blue-50 border-blue-400 shadow-sm'
-                  : 'bg-gray-50 border-gray-200'
-                  }`}
-              >
-                <SmartphoneIcon size={20} color={selectedProviderTab === 'wave' ? '#2563EB' : '#9CA3AF'} />
-                <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Wave</Text>
-              </TouchableOpacity>
-
-              {/* Tab 2: Orange Money */}
-              <TouchableOpacity
-                onPress={() => setSelectedProviderTab('orange_money')}
-                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${selectedProviderTab === 'orange_money'
-                  ? 'bg-blue-50 border-blue-400 shadow-sm'
-                  : 'bg-gray-50 border-gray-200'
-                  }`}
-              >
-                <SmartphoneIcon size={20} color={selectedProviderTab === 'orange_money' ? '#2563EB' : '#9CA3AF'} />
-                <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Orange Money</Text>
-              </TouchableOpacity>
-
-              {/* Tab 3: Carte / Virement */}
-              <TouchableOpacity
-                onPress={() => setSelectedProviderTab('card')}
-                className={`flex-1 py-3 px-2 rounded-2xl border items-center ${selectedProviderTab === 'card'
-                  ? 'bg-blue-50 border-blue-400 shadow-sm'
-                  : 'bg-gray-50 border-gray-200'
-                  }`}
-              >
-                <CreditCardIcon size={20} color={selectedProviderTab === 'card' ? '#2563EB' : '#9CA3AF'} />
-                <Text className="text-[11px] font-black text-brand-dark text-center mt-1">Carte / Visa</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* TAB CONTENT: WAVE OR OM */}
-            {selectedProviderTab !== 'card' ? (
-              <View>
-                <Text className="text-xs font-semibold text-gray-600 mb-2">
-                  Numéro de téléphone rattaché ({selectedProviderTab === 'wave' ? 'Wave' : 'Orange Money'})
-                </Text>
-                <TextInput
-                  className="bg-gray-50 border border-gray-300 rounded-xl p-3.5 text-base font-bold text-brand-dark tracking-wider mb-5"
-                  placeholder="+221771234567"
-                  keyboardType="phone-pad"
-                  value={paymentPhoneInput}
-                  onChangeText={setPaymentPhoneInput}
-                />
-
-                <TouchableOpacity
-                  onPress={handleSavePaymentMethod}
-                  className="w-full bg-brand-primary active:bg-brand-primaryHover py-4 rounded-2xl items-center shadow-md shadow-blue-500/25"
-                >
-                  <Text className="text-base font-black text-white uppercase tracking-wider">
-                    ENREGISTRER CE MOYEN
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              /* TAB CONTENT: CARTE BANCAIRE VIA WHATSAPP ADMIN */
-              <View className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 mb-3">
-                <Text className="text-sm font-extrabold text-emerald-900 mb-1">
-                  Retrait & Virement par Carte Bancaire
-                </Text>
-                <Text className="text-xs text-emerald-800 leading-relaxed mb-4">
-                  Pour effectuer un retrait par carte Visa/Mastercard ou configurer un virement bancaire, contactez directement l'administrateur Tontine Express sur WhatsApp.
-                </Text>
-
-                <TouchableOpacity
-                  onPress={handleContactAdminWhatsApp}
-                  activeOpacity={0.85}
-                  className="w-full bg-emerald-600 active:bg-emerald-700 py-3.5 rounded-2xl items-center justify-center flex-row space-x-2 shadow-sm"
-                >
-                  <WhatsAppIcon size={20} color="#FFFFFF" />
-                  <Text className="text-xs font-black text-white uppercase tracking-wider">
-                    Contacter l'Admin sur WhatsApp
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
         </View>
       </Modal>

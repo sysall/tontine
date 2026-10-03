@@ -570,7 +570,7 @@ export class TontineTransactionService {
       let expectedPayoutFcfa = 0;
       let activeTontinesCount = 0;
       let nextPaymentFcfa = 0;
-      let nextPaymentDueDate = 'Non définie';
+      let nextPaymentDueDate = '';
       let earliestNextDueDate: Date | null = null;
       let myPayoutTurn = 0;
 
@@ -641,7 +641,7 @@ export class TontineTransactionService {
         summary: {
           totalSavedFcfa: 0,
           nextPaymentFcfa: 0,
-          nextPaymentDueDate: 'Non définie',
+          nextPaymentDueDate: '',
           expectedPayoutFcfa: 0,
           myPayoutTurn: 0,
           activeTontinesCount: 0,

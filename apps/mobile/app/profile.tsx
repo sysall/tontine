@@ -25,6 +25,8 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { authApi } from '../api/authApi';
+import { kycApi } from '../api/kycApi';
+import { KycUploadModal } from '../components/KycUploadModal';
 import { db, auth } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -48,9 +50,19 @@ export default function ProfileScreen() {
   const [fullNameInput, setFullNameInput] = useState(user?.fullName || '');
   const [isSavingName, setIsSavingName] = useState(false);
 
-  // KYC Modal State
+  // KYC Modal & Status State
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
-  const [cniNumber, setCniNumber] = useState('');
+  const [kycStatusState, setKycStatusState] = useState<string>(user?.isVerified ? 'VERIFIED' : 'NOT_SUBMITTED');
+
+  useEffect(() => {
+    if (user?.uid) {
+      kycApi.getKycStatus(user.uid).then((res) => {
+        if (res?.status) {
+          setKycStatusState(res.status);
+        }
+      }).catch(() => { });
+    }
+  }, [user?.uid]);
 
   // Payment Method Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -160,15 +172,6 @@ export default function ProfileScreen() {
     setOldPin('');
     setNewPin('');
     Alert.alert('Code Secret Mis à Jour', 'Votre nouveau code secret à 4 chiffres a été enregistré avec succès.');
-  };
-
-  const handleKycSubmit = () => {
-    if (!cniNumber || cniNumber.trim().length < 9) {
-      Alert.alert('Numéro CNI', 'Veuillez saisir un numéro de CNI/Passeport valide.');
-      return;
-    }
-    setIsKycModalOpen(false);
-    Alert.alert('CNI Enregistrée', 'Vos informations CNI ont été envoyées avec succès pour validation BCEAO.');
   };
 
   const handleSavePaymentMethod = async () => {
@@ -327,7 +330,7 @@ export default function ProfileScreen() {
         {/* SECTION: CONFIGURATION DU MOYEN DE PAIEMENT UNIFIÉE */}
         <View className="bg-white rounded-3xl p-5 mb-5 shadow-sm border border-gray-100">
           <Text className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
-            Moyen de Paiement pour Retraits & Versements
+            Moyen de Paiement pour Retraits
           </Text>
 
           <View className="flex-row items-center justify-between p-3.5 bg-[#D4F2E4]/80 rounded-2xl border border-[#19A66A] mb-3">
@@ -365,15 +368,21 @@ export default function ProfileScreen() {
             className="p-4 border-b border-gray-100 flex-row justify-between items-center"
           >
             <View className="flex-row items-center space-x-3">
-              <View className="w-9 h-9 rounded-xl bg-[#D4F2E4] items-center justify-center border border-[#19A66A]">
+              <View className={`w-9 h-9 rounded-xl items-center justify-center border ${kycStatusState === 'VERIFIED' ? 'bg-[#D4F2E4] border-[#19A66A]' :
+                kycStatusState === 'REJECTED' ? 'bg-red-50 border-red-300' :
+                  kycStatusState.includes('PENDING') ? 'bg-amber-50 border-amber-300' : 'bg-slate-100 border-slate-200'
+                }`}>
                 <ShieldCheckIcon size={18} color="#173F73" />
               </View>
-              <View>
+              <View className="flex-1 pr-2">
                 <Text className="text-sm font-extrabold text-brand-dark">
                   Vérification d'Identité (KYC)
                 </Text>
-                <Text className="text-xs text-gray-500">
-                  {isKycVerified ? 'CNI / Passeport validé ✓' : 'Pièce d\'identité requise'}
+                <Text className="text-xs text-gray-500 font-medium">
+                  {kycStatusState === 'VERIFIED' ? 'CNI / Passeport validé ✓' :
+                    kycStatusState === 'REJECTED' ? '❌ Dossier Rejeté - Cliquer pour réessayer' :
+                      kycStatusState.includes('PENDING') ? '⏳ KYC en cours de traitement par OCR Vision' :
+                        'Pièce d\'identité requise (CNI/Passeport)'}
                 </Text>
               </View>
             </View>
@@ -451,45 +460,17 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* MODAL 1: KYC IDENTITY VERIFICATION SHEET */}
-      <Modal visible={isKycModalOpen} animationType="slide" transparent>
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
-            <View className="flex-row justify-between items-center mb-4 pb-2 border-b border-gray-100">
-              <Text className="text-xl font-black text-brand-dark uppercase">
-                Vérification d'Identité (KYC)
-              </Text>
-              <TouchableOpacity onPress={() => setIsKycModalOpen(false)}>
-                <Text className="text-xl font-bold text-gray-400">✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-xs text-gray-500 mb-4">
-              Conformément à la réglementation BCEAO, entrez votre numéro de Carte Nationale d'Identité (CNI) sénégalaise ou de Passeport :
-            </Text>
-
-            <Text className="text-xs font-semibold text-gray-600 mb-2">
-              Numéro de CNI / Passeport (13 chiffres)
-            </Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-300 rounded-xl p-3.5 text-lg font-bold text-brand-dark tracking-wider mb-5"
-              placeholder="1 757 1995 01234"
-              keyboardType="number-pad"
-              value={cniNumber}
-              onChangeText={setCniNumber}
-            />
-
-            <TouchableOpacity
-              onPress={handleKycSubmit}
-              className="w-full bg-brand-primary active:bg-brand-primaryHover py-4 rounded-2xl items-center shadow-md shadow-blue-500/25"
-            >
-              <Text className="text-base font-black text-white uppercase tracking-wider">
-                VALIDER MES INFORMATIONS
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* MODAL 1: KYC IDENTITY VERIFICATION & PHOTO UPLOAD SHEET */}
+      <KycUploadModal
+        visible={isKycModalOpen}
+        onClose={() => setIsKycModalOpen(false)}
+        userId={user?.uid || 'user_demo_1'}
+        clientName={user?.fullName || user?.phoneNumber || 'Membre Tontine'}
+        clientPhone={user?.phoneNumber || '770000000'}
+        onKycCompleted={(res) => {
+          setKycStatusState(res.status);
+        }}
+      />
 
       {/* MODAL 2: UNIFIED PAYMENT METHOD CONFIGURATION SHEET */}
       <Modal visible={isPaymentModalOpen} animationType="slide" transparent>
@@ -497,7 +478,7 @@ export default function ProfileScreen() {
           <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
             <View className="flex-row justify-between items-center mb-4 pb-2 border-b border-gray-100">
               <Text className="text-xl font-black text-brand-dark uppercase">
-                Moyen de Paiement & Retrait
+                Moyen de Retrait
               </Text>
               <TouchableOpacity onPress={() => setIsPaymentModalOpen(false)}>
                 <Text className="text-xl font-bold text-gray-400">✕</Text>
@@ -554,11 +535,9 @@ export default function ProfileScreen() {
                   Numéro de téléphone rattaché ({selectedProviderTab === 'wave' ? 'Wave' : 'Orange Money'})
                 </Text>
                 <TextInput
-                  className="bg-gray-50 border border-gray-300 rounded-xl p-3.5 text-base font-bold text-brand-dark tracking-wider mb-5"
-                  placeholder="+221771234567"
-                  keyboardType="phone-pad"
+                  className="bg-gray-100 border border-gray-200 rounded-xl p-3.5 text-base font-bold text-gray-600 tracking-wider mb-5"
+                  editable={false}
                   value={paymentPhoneInput}
-                  onChangeText={setPaymentPhoneInput}
                 />
 
                 <TouchableOpacity

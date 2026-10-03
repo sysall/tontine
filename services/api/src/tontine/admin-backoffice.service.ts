@@ -463,22 +463,33 @@ export class AdminBackofficeService {
    * Action: Approve KYC in Firestore
    */
   async approveKyc(kycId: string, notes?: string) {
-    const targetKyc = this.kycRecords.find((k) => k.id === kycId);
+    const kycDocRef = this.firestoreService.kyc().doc(kycId);
+    let clientId = this.kycRecords.find((k) => k.id === kycId)?.clientId;
 
     try {
-      await this.firestoreService.kyc().doc(kycId).set({
+      const kycSnap = await kycDocRef.get();
+      if (kycSnap.exists && kycSnap.data()?.clientId) {
+        clientId = kycSnap.data()?.clientId;
+      }
+      if (!clientId && kycId.startsWith('kyc_')) {
+        clientId = kycId.replace('kyc_', '');
+      }
+
+      await kycDocRef.set({
         status: 'VERIFIED',
-        adminNotes: notes || 'Approuvé par Admin',
+        adminNotes: notes || 'Approuvé par Admin Web Backoffice',
         verifiedAt: new Date().toISOString(),
         verifiedBy: 'Admin Web Backoffice',
       }, { merge: true });
 
-      if (targetKyc && targetKyc.clientId) {
-        await this.firestoreService.users().doc(targetKyc.clientId).set({
+      if (clientId) {
+        await this.firestoreService.users().doc(clientId).set({
           kycStatus: 'VERIFIED',
+          isVerified: true,
+          updatedAt: new Date().toISOString(),
         }, { merge: true });
       }
-      this.logger.log(`Approved KYC ${kycId} in Firestore`);
+      this.logger.log(`Approved KYC ${kycId} for client ${clientId} in Firestore`);
     } catch (err: any) {
       this.logger.error(`Failed to approve KYC in Firestore: ${err.message}`);
     }
@@ -490,22 +501,33 @@ export class AdminBackofficeService {
    * Action: Reject KYC in Firestore
    */
   async rejectKyc(kycId: string, notes: string) {
-    const targetKyc = this.kycRecords.find((k) => k.id === kycId);
+    const kycDocRef = this.firestoreService.kyc().doc(kycId);
+    let clientId = this.kycRecords.find((k) => k.id === kycId)?.clientId;
 
     try {
-      await this.firestoreService.kyc().doc(kycId).set({
+      const kycSnap = await kycDocRef.get();
+      if (kycSnap.exists && kycSnap.data()?.clientId) {
+        clientId = kycSnap.data()?.clientId;
+      }
+      if (!clientId && kycId.startsWith('kyc_')) {
+        clientId = kycId.replace('kyc_', '');
+      }
+
+      await kycDocRef.set({
         status: 'REJECTED',
-        adminNotes: notes,
+        adminNotes: notes || 'Document non conforme.',
         verifiedAt: new Date().toISOString(),
         verifiedBy: 'Admin Web Backoffice',
       }, { merge: true });
 
-      if (targetKyc && targetKyc.clientId) {
-        await this.firestoreService.users().doc(targetKyc.clientId).set({
+      if (clientId) {
+        await this.firestoreService.users().doc(clientId).set({
           kycStatus: 'REJECTED',
+          isVerified: false,
+          updatedAt: new Date().toISOString(),
         }, { merge: true });
       }
-      this.logger.log(`Rejected KYC ${kycId} in Firestore`);
+      this.logger.log(`Rejected KYC ${kycId} for client ${clientId} in Firestore`);
     } catch (err: any) {
       this.logger.error(`Failed to reject KYC in Firestore: ${err.message}`);
     }

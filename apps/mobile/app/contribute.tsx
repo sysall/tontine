@@ -6,11 +6,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TontineIcon, WalletIcon, SmartphoneIcon, ShieldCheckIcon } from '../components/Icons';
+import { WalletIcon, SmartphoneIcon, ShieldCheckIcon } from '../components/Icons';
 import { useDashboardSummary } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 import { useAuthStore } from '../store/useAuthStore';
@@ -92,7 +91,7 @@ export default function ContributeScreen() {
             </View>
           </View>
           <Text className="text-xs text-gray-300 leading-relaxed">
-            Vos paiements sont traités instantanément via Wave Sénégal ou Orange Money avec reçu officiel immédiat.
+            Vos paiements sont traités instantanément via Wave Sénégal, Orange Money ou Carte bancaire.
           </Text>
         </View>
 
@@ -228,8 +227,8 @@ export default function ContributeScreen() {
                   onPress={() => setSelectedProvider('wave')}
                   activeOpacity={0.85}
                   className={`p-4 rounded-2xl border mb-3 flex-row justify-between items-center ${selectedProvider === 'wave'
-                      ? 'bg-[#D4F2E4] border-[#19A66A]'
-                      : 'bg-white border-gray-200'
+                    ? 'bg-[#D4F2E4] border-[#19A66A]'
+                    : 'bg-white border-gray-200'
                     }`}
                 >
                   <View className="flex-row items-center space-x-3">
@@ -253,8 +252,8 @@ export default function ContributeScreen() {
                   onPress={() => setSelectedProvider('orange_money')}
                   activeOpacity={0.85}
                   className={`p-4 rounded-2xl border mb-5 flex-row justify-between items-center ${selectedProvider === 'orange_money'
-                      ? 'bg-[#D4F2E4] border-[#19A66A]'
-                      : 'bg-white border-gray-200'
+                    ? 'bg-[#D4F2E4] border-[#19A66A]'
+                    : 'bg-white border-gray-200'
                     }`}
                 >
                   <View className="flex-row items-center space-x-3">

@@ -27,15 +27,14 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       <Text className="text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">
         Numéro de téléphone
       </Text>
-      
+
       <View
-        className={`flex-row items-center bg-gray-50 border rounded-2xl px-4 py-3.5 transition-all ${
-          error
-            ? 'border-red-500 bg-red-50/20'
-            : value.length === 9
+        className={`flex-row items-center bg-gray-50 border rounded-2xl px-4 py-3.5 transition-all ${error
+          ? 'border-red-500 bg-red-50/20'
+          : value.length === 9
             ? 'border-emerald-500 bg-emerald-50/10'
             : 'border-gray-300 focus:border-brand-dark'
-        }`}
+          }`}
       >
         {/* Country Code Prefix Badge */}
         <TouchableOpacity
@@ -58,13 +57,6 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           editable={!disabled}
           autoFocus
         />
-
-        {/* Format guide icon when valid */}
-        {value.length === 9 && (
-          <View className="w-6 h-6 rounded-full bg-emerald-500 items-center justify-center">
-            <Text className="text-white text-xs font-bold">✓</Text>
-          </View>
-        )}
       </View>
 
       {/* Operator hints & validation errors */}
@@ -72,7 +64,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         <Text className="text-xs font-medium text-red-500 mt-1.5 ml-1">{error}</Text>
       ) : (
         <Text className="text-[11px] text-gray-500 mt-1.5 ml-1">
-          Opérateurs acceptés : Orange (77/78), Free (76), Expresso (70), Promobile (75)
+          Tous les opérateurs sont acceptés
         </Text>
       )}
     </View>

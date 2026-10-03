@@ -1,14 +1,10 @@
-import { Module, Controller, Get } from '@nestjs/common';
-
-@Controller('api/v1/kyc')
-export class KycController {
-  @Get('status')
-  getStatus() {
-    return { service: 'kyc-module', status: 'operational', timestamp: new Date() };
-  }
-}
+import { Module } from '@nestjs/common';
+import { KycController } from './kyc.controller';
+import { KycService } from './kyc.service';
 
 @Module({
   controllers: [KycController],
+  providers: [KycService],
+  exports: [KycService],
 })
 export class KycModule {}

@@ -74,10 +74,16 @@ export interface DashboardResponse {
 }
 
 export interface SubscribeOfferPayload {
-  offerType: 'rotative' | 'projet';
-  tierId: string;
-  amountFcfa: number;
-  frequency?: 'daily' | 'weekly' | 'monthly';
+  userId?: string;
+  category?: 'PERMANENT' | 'EVENT';
+  catalogId?: 'natt_classique' | 'tekk_tegui';
+  eventId?: string;
+  customTitle?: string;
+  offerType?: 'rotative' | 'projet';
+  tierId?: string;
+  targetAmount?: number;
+  amountFcfa?: number;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
 }
 
 export interface JoinTontinePayload {
@@ -138,7 +144,7 @@ export const tontineApi = {
         summary: {
           totalSavedFcfa: 0,
           nextPaymentFcfa: 0,
-          nextPaymentDueDate: 'Non définie',
+          nextPaymentDueDate: '',
           expectedPayoutFcfa: 0,
           myPayoutTurn: 1,
           activeTontinesCount: 0,

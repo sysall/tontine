@@ -161,8 +161,11 @@ export default function LoginScreen() {
       });
 
       // 3. Update Zustand Store State
+      const userId = res.user?.uid || res.user?.id;
       setAuth(
         {
+          uid: userId,
+          id: userId,
           phoneNumber: res.user?.phoneNumber || fullPhone,
           fullName: res.user?.fullName || fullName.trim() || 'Membre Tontine',
           isVerified: true,

@@ -157,17 +157,37 @@ export class AdminBackofficeService {
    */
   async syncWithFirestore() {
     try {
-      // 1. Fetch Users from Cloud Firestore (/users)
+      // 1. Fetch Users from Cloud Firestore (/users) and build usersMap
       const usersSnap = await this.firestoreService.users().get();
+      const usersMap = new Map<string, { fullName: string; phone: string }>();
+
       if (!usersSnap.empty) {
         this.clients = usersSnap.docs.map((doc) => {
           const d = doc.data();
+          const rawName = d.fullName || d.name || d.extractedFullName;
+          const phone = d.phoneNumber || d.phone || d.paymentPhoneNumber || '';
+          
+          let fullName = rawName;
+          if (!fullName || fullName === 'Membre') {
+            fullName = phone ? `Membre (${phone})` : (doc.id.startsWith('user_') ? `Membre (+${doc.id.replace('user_', '')})` : 'Membre Tontine');
+          }
+
+          const userObj = { fullName, phone };
+          usersMap.set(doc.id, userObj);
+          if (d.uid) usersMap.set(d.uid, userObj);
+          if (phone) {
+            const clean = phone.replace(/[\+\s\-]/g, '');
+            usersMap.set(clean, userObj);
+            usersMap.set(`+${clean}`, userObj);
+            usersMap.set(`user_${clean}`, userObj);
+          }
+
           return {
             id: doc.id,
-            fullName: d.fullName || d.phoneNumber || 'Membre',
-            phone: d.phoneNumber || d.phone || '',
+            fullName,
+            phone,
             email: d.email || 'Non renseigné',
-            kycStatus: d.kycStatus || 'PENDING',
+            kycStatus: d.kycStatus || (d.isVerified ? 'APPROVED' : 'PENDING'),
             joinedDate: d.createdAt ? new Date(d.createdAt).toLocaleDateString('fr-FR') : 'Compte récent',
             activeNattsCount: d.activeNattsCount || 0,
             totalContributedFcfa: d.totalContributedFcfa || 0,
@@ -178,8 +198,27 @@ export class AdminBackofficeService {
         this.clients = [];
       }
 
+      // Helper function to resolve user info from any ID or phone
+      const resolveUser = (userId?: string, phoneFallback?: string, nameFallback?: string) => {
+        if (userId && usersMap.has(userId)) return usersMap.get(userId)!;
+        if (phoneFallback) {
+          const clean = phoneFallback.replace(/[\+\s\-]/g, '');
+          if (usersMap.has(clean)) return usersMap.get(clean)!;
+          if (usersMap.has(`user_${clean}`)) return usersMap.get(`user_${clean}`)!;
+        }
+        
+        let phone = phoneFallback || (userId?.startsWith('user_') ? `+${userId.replace('user_', '')}` : '');
+        let fullName = nameFallback && nameFallback !== 'Membre' && nameFallback !== 'Client Tontine' 
+          ? nameFallback 
+          : (phone ? `Membre (${phone})` : 'Membre Tontine');
+
+        return { fullName, phone };
+      };
+
       // 2. Fetch UserNatts (Subscriptions) from Cloud Firestore (/user_natts)
       const nattsSnap = await this.firestoreService.userNatts().get();
+      const nattsMap = new Map<string, { title: string; clientName: string; clientPhone: string }>();
+
       if (!nattsSnap.empty) {
         this.subscriptions = nattsSnap.docs.map((doc) => {
           const d = doc.data();
@@ -192,13 +231,23 @@ export class AdminBackofficeService {
           if (d.payoutStatus === 'PAID' || d.status === 'COMPLETED') status = 'PAID_OUT';
           else if (isEligibleForPayout) status = 'ELIGIBLE_PAYOUT';
 
+          const userId = d.userId || d.uid || '';
+          const userMeta = resolveUser(userId, d.clientPhone || d.userPhone, d.clientName);
+          const categoryTitle = d.title || (d.catalogId === 'tekk_tegui' ? 'Tekk Tegui' : 'Natt Classique');
+
+          nattsMap.set(doc.id, {
+            title: categoryTitle,
+            clientName: userMeta.fullName,
+            clientPhone: userMeta.phone,
+          });
+
           return {
             id: doc.id,
-            clientId: d.userId || 'user-default',
-            clientName: d.clientName || 'Client Tontine',
-            clientPhone: d.clientPhone || '+221 77 000 00 00',
+            clientId: userId || 'user-default',
+            clientName: userMeta.fullName,
+            clientPhone: userMeta.phone,
             category: (d.category === 'EVENT' ? 'evenement' : d.catalogId === 'tekk_tegui' ? 'tekk_tegui' : 'classique') as NattCategory,
-            categoryTitle: d.title || 'Natt Express',
+            categoryTitle,
             targetAmountFcfa,
             contributedAmountFcfa,
             progressPercent,
@@ -255,13 +304,18 @@ export class AdminBackofficeService {
           const tx = doc.data();
           const createdAtFormatted = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('fr-FR') : 'Transaction récente';
 
+          const userId = tx.userId || tx.uid || '';
+          const nattMeta = tx.userNattId ? nattsMap.get(tx.userNattId) : null;
+          const userMeta = resolveUser(userId, tx.clientPhone || nattMeta?.clientPhone, tx.clientName || nattMeta?.clientName);
+          const nattTitle = tx.nattTitle || tx.description || nattMeta?.title || 'Cotisation Natt';
+
           if (tx.type === 'NATT_PAYOUT') {
             payouts.push({
               id: doc.id,
               subscriptionId: tx.userNattId || '',
-              clientName: tx.clientName || 'Client Tontine',
-              clientPhone: tx.clientPhone || '',
-              nattTitle: tx.nattTitle || 'Versement Natt',
+              clientName: userMeta.fullName,
+              clientPhone: userMeta.phone,
+              nattTitle,
               targetAmountFcfa: tx.amount || 0,
               contributedAtPayoutFcfa: Math.round((tx.amount || 0) * 0.7),
               progressAtPayoutPercent: 70,
@@ -277,9 +331,9 @@ export class AdminBackofficeService {
             cotisations.push({
               id: doc.id,
               subscriptionId: tx.userNattId || '',
-              clientName: tx.clientName || 'Membre',
-              clientPhone: tx.clientPhone || '',
-              nattTitle: tx.nattTitle || 'Cotisation Natt',
+              clientName: userMeta.fullName,
+              clientPhone: userMeta.phone,
+              nattTitle,
               amountFcfa: tx.amount || 0,
               provider: (tx.gateway === 'ORANGE_MONEY' ? 'Orange Money' : tx.gateway === 'FREE_MONEY' ? 'Free Money' : 'Wave') as any,
               reference: tx.gatewayReference || doc.id,
@@ -295,21 +349,110 @@ export class AdminBackofficeService {
         this.payoutHistory = [];
       }
 
-      // 6. Fetch KYC Documents from Cloud Firestore (/kyc_documents)
+      // 6. Dynamic Overdue Contributions from user_natts
+      const nowMs = Date.now();
+      const overdueList: OverdueContribution[] = [];
+
+      nattsSnap?.docs.forEach((doc) => {
+        const d = doc.data();
+        if (d.nextDueDate && d.remainingBalance > 0 && d.status !== 'COMPLETED') {
+          const dueMs = new Date(d.nextDueDate).getTime();
+          if (dueMs < nowMs) {
+            const daysOverdue = Math.max(1, Math.floor((nowMs - dueMs) / (1000 * 60 * 60 * 24)));
+            const userId = d.userId || '';
+            const userMeta = resolveUser(userId, d.clientPhone || d.userPhone, d.clientName);
+
+            overdueList.push({
+              id: `ovd-${doc.id}`,
+              clientId: userId,
+              clientName: userMeta.fullName,
+              clientPhone: userMeta.phone,
+              nattTitle: d.title || 'Natt Classique',
+              category: (d.category === 'EVENT' ? 'evenement' : d.catalogId === 'tekk_tegui' ? 'tekk_tegui' : 'classique') as NattCategory,
+              expectedAmountFcfa: d.installmentAmount || d.amountPerCycle || Math.min(d.remainingBalance, (d.targetAmount || 500000) / 10),
+              dueDate: new Date(d.nextDueDate).toLocaleDateString('fr-FR'),
+              daysOverdue,
+              status: 'OVERDUE',
+            });
+          }
+        }
+      });
+      this.overdueContributions = overdueList;
+
+      // 7. Ensure every client in subscriptions exists in clients list
+      this.subscriptions.forEach((sub) => {
+        const cleanSubPhone = sub.clientPhone ? sub.clientPhone.replace(/[\+\s\-]/g, '') : '';
+        const exists = this.clients.some(
+          (c) => c.id === sub.clientId || (cleanSubPhone && c.phone.replace(/[\+\s\-]/g, '') === cleanSubPhone)
+        );
+
+        if (!exists && (sub.clientId || sub.clientPhone)) {
+          this.clients.push({
+            id: sub.clientId || `user_${cleanSubPhone}`,
+            fullName: sub.clientName || `Membre (${sub.clientPhone})`,
+            phone: sub.clientPhone || '',
+            email: 'Non renseigné',
+            kycStatus: 'VERIFIED',
+            joinedDate: sub.startDate || 'Souscription récente',
+            activeNattsCount: 0,
+            totalContributedFcfa: 0,
+            totalReceivedFcfa: 0,
+          });
+        }
+      });
+
+      // 8. Dynamically calculate client metrics from subscriptions and payouts
+      this.clients = this.clients.map((cli) => {
+        const cleanCliPhone = cli.phone ? cli.phone.replace(/[\+\s\-]/g, '') : '';
+
+        const clientSubs = this.subscriptions.filter((sub) => {
+          const cleanSubPhone = sub.clientPhone ? sub.clientPhone.replace(/[\+\s\-]/g, '') : '';
+          return (
+            sub.clientId === cli.id ||
+            (cleanCliPhone && cleanSubPhone && cleanCliPhone === cleanSubPhone) ||
+            (cli.id.startsWith('user_') && sub.clientId === cli.id)
+          );
+        });
+
+        const clientPayouts = this.payoutHistory.filter((p) => {
+          const cleanPPhone = p.clientPhone ? p.clientPhone.replace(/[\+\s\-]/g, '') : '';
+          return (
+            p.clientPhone === cli.phone ||
+            (cleanCliPhone && cleanPPhone && cleanCliPhone === cleanPPhone) ||
+            (p.subscriptionId && clientSubs.some((s) => s.id === p.subscriptionId))
+          );
+        });
+
+        const activeNattsCount = clientSubs.length;
+        const totalContributedFcfa = clientSubs.reduce((acc, curr) => acc + curr.contributedAmountFcfa, 0);
+        const totalReceivedFcfa = clientPayouts.reduce((acc, curr) => acc + curr.payoutAmountFcfa, 0);
+
+        return {
+          ...cli,
+          activeNattsCount,
+          totalContributedFcfa,
+          totalReceivedFcfa,
+        };
+      });
+
+      // 7. Fetch KYC Documents from Cloud Firestore (/kyc_documents)
       const kycSnap = await this.firestoreService.kyc().get();
       if (!kycSnap.empty) {
         this.kycRecords = kycSnap.docs.map((doc) => {
           const d = doc.data();
+          const userId = d.clientId || d.userId || '';
+          const userMeta = resolveUser(userId, d.clientPhone, d.clientName);
+
           return {
             id: doc.id,
-            clientId: d.clientId || '',
-            clientName: d.clientName || 'Client',
-            clientPhone: d.clientPhone || '',
-            clientEmail: d.clientEmail || '',
+            clientId: userId,
+            clientName: userMeta.fullName,
+            clientPhone: userMeta.phone,
+            clientEmail: d.clientEmail || 'Non renseigné',
             documentType: d.documentType || 'CNI_CEDEAO',
             documentNumber: d.documentNumber || '',
             extractedNin: d.extractedNin || '',
-            extractedFullName: d.extractedFullName || d.clientName || '',
+            extractedFullName: d.extractedFullName || userMeta.fullName,
             extractedBirthDate: d.extractedBirthDate || '',
             extractedExpiryDate: d.extractedExpiryDate || '',
             ocrConfidencePercent: d.ocrConfidencePercent || 80,
@@ -339,11 +482,35 @@ export class AdminBackofficeService {
     await this.syncWithFirestore();
 
     // Calculate dynamic metrics
+    const totalCollectedFromSubscriptions = this.subscriptions.reduce((acc, curr) => acc + curr.contributedAmountFcfa, 0);
+    const totalCollectedFromCotisations = this.cotisations.reduce((acc, curr) => acc + curr.amountFcfa, 0);
+    const actualTotalCollected = Math.max(
+      this.treasury.totalCollectedFcfa || 0,
+      totalCollectedFromSubscriptions,
+      totalCollectedFromCotisations
+    );
+
+    const totalPaidOutFromHistory = this.payoutHistory.reduce((acc, curr) => acc + curr.payoutAmountFcfa, 0);
+    const actualTotalPaidOut = Math.max(
+      this.treasury.totalPaidOutFcfa || 0,
+      totalPaidOutFromHistory
+    );
+
+    const actualBalance = Math.max(
+      this.treasury.totalBalanceFcfa || 0,
+      actualTotalCollected - actualTotalPaidOut
+    );
+
+    this.treasury.totalCollectedFcfa = actualTotalCollected;
+    this.treasury.totalPaidOutFcfa = actualTotalPaidOut;
+    this.treasury.totalBalanceFcfa = actualBalance;
+
     const pendingPayouts = this.subscriptions.filter((s) => s.status === 'ELIGIBLE_PAYOUT');
     this.treasury.pendingPayoutsCount = pendingPayouts.length;
     this.treasury.pendingPayoutsTotalFcfa = pendingPayouts.reduce((acc, curr) => acc + curr.targetAmountFcfa, 0);
     this.treasury.activeClientsCount = this.clients.length;
     this.treasury.activeSubscriptionsCount = this.subscriptions.length;
+
     if (this.treasury.totalCollectedFcfa > 0) {
       this.treasury.solvencyRatioPercent = Math.round((this.treasury.totalBalanceFcfa / this.treasury.totalCollectedFcfa) * 100 * 10) / 10;
     } else {

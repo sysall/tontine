@@ -150,7 +150,8 @@ export default function LoginScreen() {
         idToken = await userCredential.user.getIdToken();
       } else {
         // Fallback for test phone numbers / dev mode when SMS region is restricted
-        idToken = 'firebase_test_id_token_' + Date.now();
+        const cleanPhone = fullPhone.replace(/[\+\s\-]/g, '');
+        idToken = `firebase_test_id_token_${cleanPhone}`;
       }
 
       // 2. Synchronize token with backend API

@@ -17,9 +17,9 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
 
   const filteredRecords = kycRecords.filter(r => {
     const matchesSearch = r.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.clientPhone.includes(searchTerm) ||
-                          r.extractedNin.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = 
+      r.clientPhone.includes(searchTerm) ||
+      r.extractedNin.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter =
       filterStatus === 'ALL' ||
       (filterStatus === 'PENDING' && r.status === 'PENDING_MANUAL_CHECK') ||
       (filterStatus === 'VERIFIED' && r.status === 'VERIFIED') ||
@@ -30,46 +30,24 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
 
   return (
     <div>
-      {/* Top Banner */}
-      <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldCheck color="#19A66A" />
-              <span>Vérification KYC & Double Checking OCR</span>
-            </h2>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-              Contrôle visuel et validation manuelle des pièces d'identité lorsque l'OCR automatique n'est pas concluant.
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <div className="badge badge-yellow" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}>
-              <AlertTriangle size={14} />
-              <span>{pendingCount} Double Check(s) Requis</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* KPI Metrics row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem', marginBottom: '1.5rem' }}>
-        <div 
+        <div
           className={`glass-card glass-card-interactive ${filterStatus === 'PENDING' ? 'selected' : ''}`}
           onClick={() => setFilterStatus('PENDING')}
           style={{ borderColor: filterStatus === 'PENDING' ? '#19A66A' : 'var(--border-color)', background: 'rgba(25, 166, 106, 0.06)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>En Attente Double Check</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>En Attente de validation</span>
             <AlertTriangle size={20} color="#D9A33A" />
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#19A66A', marginTop: '0.25rem' }}>
             {pendingCount}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>OCR inconcluant ou incomplet</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>KYC en attente</div>
         </div>
 
-        <div 
+        <div
           className={`glass-card glass-card-interactive ${filterStatus === 'VERIFIED' ? 'selected' : ''}`}
           onClick={() => setFilterStatus('VERIFIED')}
           style={{ borderColor: filterStatus === 'VERIFIED' ? '#19A66A' : 'var(--border-color)' }}
@@ -81,10 +59,10 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
           <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#19A66A', marginTop: '0.25rem' }}>
             {verifiedCount}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Approuvés par OCR ou Admin</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Approuvés par Admin</div>
         </div>
 
-        <div 
+        <div
           className={`glass-card glass-card-interactive ${filterStatus === 'REJECTED' ? 'selected' : ''}`}
           onClick={() => setFilterStatus('REJECTED')}
           style={{ borderColor: filterStatus === 'REJECTED' ? '#ef4444' : 'var(--border-color)' }}
@@ -104,9 +82,9 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-          <input 
-            type="text" 
-            className="form-input" 
+          <input
+            type="text"
+            className="form-input"
             placeholder="Rechercher un dépôt KYC par nom client, téléphone, NIN..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -115,13 +93,13 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(23, 63, 115, 0.04)', padding: '0.35rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <button 
+          <button
             className={`btn btn-sm ${filterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setFilterStatus('ALL')}
           >
             Tous ({kycRecords.length})
           </button>
-          <button 
+          <button
             className={`btn btn-sm ${filterStatus === 'PENDING' ? 'btn-gold' : 'btn-secondary'}`}
             onClick={() => setFilterStatus('PENDING')}
           >
@@ -194,7 +172,7 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
                       </td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{record.submittedAt}</td>
                       <td>
-                        <button 
+                        <button
                           className={`btn btn-sm ${record.status === 'PENDING_MANUAL_CHECK' ? 'btn-gold' : 'btn-secondary'}`}
                           onClick={() => onOpenKycModal(record)}
                         >

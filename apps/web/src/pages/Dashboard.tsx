@@ -2,13 +2,13 @@ import React from 'react';
 import { TreasuryMetrics, ClientNattSubscription, CotisationTransaction, PayoutRecord } from '../types';
 import { KPICard } from '../components/KPICard';
 import { ProgressBar } from '../components/ProgressBar';
-import { 
-  Landmark, 
-  ArrowDownRight, 
-  ArrowUpRight, 
-  AlertCircle, 
-  CheckCircle2, 
-  Layers, 
+import {
+  Landmark,
+  ArrowDownRight,
+  ArrowUpRight,
+  AlertCircle,
+  CheckCircle2,
+  Layers,
   TrendingUp,
   Sparkles,
   Zap
@@ -76,7 +76,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <button 
+          <button
             className="btn btn-gold"
             onClick={() => onNavigateToTab('payouts')}
           >
@@ -159,7 +159,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </td>
                     <td>
                       {sub.status === 'ELIGIBLE_PAYOUT' ? (
-                        <button 
+                        <button
                           className="btn btn-gold btn-sm"
                           onClick={() => onOpenPayoutModal(sub)}
                         >
@@ -207,7 +207,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             {/* System 2 */}
-            <div style={{ background: 'rgba(9, 13, 22, 0.6)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem' }}>
+            <div style={{ background: 'rgba(23, 63, 115, 0.04)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#a78bfa' }}>⚡ Tekk Tegui</span>
                 <span className="badge badge-purple">Épargne Projet</span>
@@ -221,7 +221,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             {/* System 3 */}
-            <div style={{ background: 'rgba(9, 13, 22, 0.6)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem' }}>
+            <div style={{ background: 'rgba(23, 63, 115, 0.04)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#34d399' }}>🎉 Natt Événement</span>
                 <span className="badge badge-emerald">Fêtes & Saisons</span>

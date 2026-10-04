@@ -36,4 +36,19 @@ export class SubscribeNattDto {
   @IsString()
   @IsOptional()
   customTitle?: string;
+
+  @ApiPropertyOptional({ description: 'Montant du premier versement effectué lors de la souscription (FCFA)', example: 50000 })
+  @IsNumber()
+  @IsOptional()
+  initialPaymentAmount?: number;
+
+  @ApiPropertyOptional({ description: 'Moyen de paiement (wave, orange_money)', example: 'wave' })
+  @IsString()
+  @IsOptional()
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({ description: 'Numéro de téléphone du client souscripteur', example: '+221770000000' })
+  @IsString()
+  @IsOptional()
+  userPhone?: string;
 }

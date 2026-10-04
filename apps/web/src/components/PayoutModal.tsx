@@ -24,18 +24,24 @@ export const PayoutModal: React.FC<PayoutModalProps> = ({
     }, 1200);
   };
 
+  const isExceptional = subscription.progressPercent < 70;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ShieldCheck size={22} />
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: isExceptional ? 'rgba(217, 119, 6, 0.2)' : 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {isExceptional ? <AlertTriangle size={22} color="#fbbf24" /> : <ShieldCheck size={22} />}
             </div>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Valider le Versement (100%)</h3>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Déblocage Trésorerie Unique — Règle des 70%</div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>
+                {isExceptional ? 'Versement Exceptionnel (Dérogation Admin)' : 'Valider le Versement (100%)'}
+              </h3>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {isExceptional ? 'Déblocage anticipé sous les 70% de cotisation' : 'Déblocage Trésorerie Unique — Règle des 70%'}
+              </div>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -44,18 +50,28 @@ export const PayoutModal: React.FC<PayoutModalProps> = ({
         </div>
 
         {/* Highlight Alert */}
-        <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '12px', padding: '1rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399', fontWeight: 700, fontSize: '0.85rem' }}>
-            <CheckCircle2 size={18} />
-            <span>Seuil de 70% de Cotisation Atteint !</span>
+        <div style={{
+          border: isExceptional ? '1px solid rgba(217, 119, 6, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)',
+          borderLeft: isExceptional ? '4px solid #d97706' : '4px solid #10b981',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1.25rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isExceptional ? '#d97706' : '#10b981', fontWeight: 700, fontSize: '0.85rem' }}>
+            {isExceptional ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
+            <span>{isExceptional ? 'Dérogation Administrateur — Cotisation < 70%' : 'Seuil de 70% de Cotisation Atteint !'}</span>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-            Le client <strong>{subscription.clientName}</strong> a cotisé <strong>{subscription.contributedAmountFcfa.toLocaleString('fr-FR')} FCFA</strong> ({subscription.progressPercent.toFixed(1)}%) sur son Natt de {subscription.targetAmountFcfa.toLocaleString('fr-FR')} FCFA.
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-color)', marginTop: '0.35rem', lineHeight: '1.4' }}>
+            {isExceptional ? (
+              <>Le client <strong>{subscription.clientName}</strong> a actuellement cotisé <strong>{subscription.contributedAmountFcfa.toLocaleString('fr-FR')} FCFA</strong> ({subscription.progressPercent.toFixed(1)}%) sur son Natt de {subscription.targetAmountFcfa.toLocaleString('fr-FR')} FCFA. En confirmant, vous appliquez une dérogation administrateur pour verser 100% de la somme.</>
+            ) : (
+              <>Le client <strong>{subscription.clientName}</strong> a cotisé <strong>{subscription.contributedAmountFcfa.toLocaleString('fr-FR')} FCFA</strong> ({subscription.progressPercent.toFixed(1)}%) sur son Natt de {subscription.targetAmountFcfa.toLocaleString('fr-FR')} FCFA.</>
+            )}
           </div>
         </div>
 
         {/* Payout Details */}
-        <div style={{ background: 'rgba(9, 13, 22, 0.6)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '1.25rem' }}>
+        <div style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '1.25rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem' }}>
             <div>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Client Bénéficiaire</span>
@@ -80,14 +96,13 @@ export const PayoutModal: React.FC<PayoutModalProps> = ({
         {/* Form Operator Selection */}
         <div className="form-group">
           <label className="form-label">Canal de Versement (Mobile Money / Banque)</label>
-          <select 
+          <select
             className="form-select"
             value={provider}
             onChange={(e) => setProvider(e.target.value as any)}
           >
-            <option value="Wave">Wave Sénégal (Paiement Instantané)</option>
+            <option value="Wave">Wave Sénégal</option>
             <option value="Orange Money">Orange Money Sénégal</option>
-            <option value="Virement">Virement Bancaire Direct</option>
           </select>
         </div>
 
@@ -104,8 +119,8 @@ export const PayoutModal: React.FC<PayoutModalProps> = ({
           <button className="btn btn-secondary" onClick={onClose} disabled={isProcessing}>
             Annuler
           </button>
-          <button 
-            className="btn btn-gold" 
+          <button
+            className="btn btn-gold"
             onClick={handleConfirm}
             disabled={isProcessing}
           >

@@ -36,8 +36,15 @@ export class AuthService {
       let email: string | null = null;
 
       if (idToken.startsWith('firebase_test_id_token_')) {
-        uid = 'user_test_' + idToken.replace('firebase_test_id_token_', '');
-        phoneNumber = '+221771234567';
+        const tokenValue = idToken.replace('firebase_test_id_token_', '');
+        const cleanDigits = tokenValue.replace(/[^\d]/g, '');
+        if (cleanDigits) {
+          phoneNumber = cleanDigits.startsWith('221') ? `+${cleanDigits}` : `+221${cleanDigits}`;
+          uid = `user_${cleanDigits}`;
+        } else {
+          phoneNumber = '+221771234567';
+          uid = 'user_221771234567';
+        }
       } else {
         const decoded = await this.firestoreService.auth.verifyIdToken(idToken);
         uid = decoded.uid;
@@ -266,9 +273,10 @@ export class AuthService {
     const now = new Date().toISOString();
 
     if (userQuery.empty) {
-      const newRef = this.firestoreService.users().doc();
+      const docId = `user_${normalizedPhone.replace(/[^\d]/g, '')}`;
+      const newRef = this.firestoreService.users().doc(docId);
       userDoc = {
-        uid: newRef.id,
+        uid: docId,
         phoneNumber: normalizedPhone,
         email: null,
         fullName: 'Client ' + normalizedPhone.slice(-4),

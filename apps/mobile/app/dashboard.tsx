@@ -50,7 +50,7 @@ export default function DashboardScreen() {
   const [txFilter, setTxFilter] = useState<TxFilterType>('all');
   const [selectedTxModal, setSelectedTxModal] = useState<TransactionItem | null>(null);
 
-  const userPhoneOrId = user?.phoneNumber || user?.paymentPhoneNumber;
+  const userPhoneOrId = user?.uid || user?.id || user?.phoneNumber || user?.paymentPhoneNumber;
 
   // React Query Hooks
   const { data: dashboardData, isLoading, refetch } = useDashboardSummary(userPhoneOrId);

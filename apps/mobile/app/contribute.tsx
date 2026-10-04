@@ -6,13 +6,16 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { WalletIcon, SmartphoneIcon, ShieldCheckIcon } from '../components/Icons';
-import { useDashboardSummary } from '../api/useTontine';
+import { WalletIcon, SmartphoneIcon, ShieldCheckIcon, CalendarIcon } from '../components/Icons';
+import { useDashboardSummary, useProcessContribution } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 import { useAuthStore } from '../store/useAuthStore';
+import { db, auth } from '../config/firebase';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 
 export default function ContributeScreen() {
   const router = useRouter();
@@ -24,8 +27,9 @@ export default function ContributeScreen() {
     }
   }, [isAuthenticated, user, router]);
 
-  const userPhoneOrId = user?.phoneNumber || user?.paymentPhoneNumber;
-  const { data: dashboardData, isLoading } = useDashboardSummary(userPhoneOrId);
+  const userPhoneOrId = user?.uid || user?.id || user?.phoneNumber || user?.paymentPhoneNumber;
+  const { data: dashboardData, isLoading, refetch } = useDashboardSummary(userPhoneOrId);
+  const processContributionMutation = useProcessContribution();
 
   const activeTontines: ActiveTontineItem[] = dashboardData?.tontines || [];
 
@@ -35,18 +39,83 @@ export default function ContributeScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!selectedTontine) return;
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
+
+    const effectiveUserId = user?.uid || user?.id || auth?.currentUser?.uid || user?.phoneNumber || 'user_demo_1';
+    const providerKey: 'WAVE' | 'ORANGE_MONEY' = selectedProvider === 'wave' ? 'WAVE' : 'ORANGE_MONEY';
+
+    try {
+      // 1. Direct Firestore write for immediate client sync
+      if (db && selectedTontine.id) {
+        try {
+          const userNattRef = doc(db, 'user_natts', selectedTontine.id);
+          const userNattSnap = await getDoc(userNattRef);
+          const now = new Date();
+
+          if (userNattSnap.exists()) {
+            const currentData = userNattSnap.data();
+            const newTotalPaid = (currentData.totalPaid || 0) + selectedTontine.amountPerCycle;
+            const newRemaining = Math.max(0, (currentData.targetAmount || 0) - newTotalPaid);
+            const newPaidCount = (currentData.paidInstallmentsCount || 0) + 1;
+
+            const freq = currentData.frequency || 'MONTHLY';
+            const nextDueDateObj = new Date(now);
+            if (freq === 'DAILY') nextDueDateObj.setDate(nextDueDateObj.getDate() + 1);
+            else if (freq === 'WEEKLY') nextDueDateObj.setDate(nextDueDateObj.getDate() + 7);
+            else nextDueDateObj.setMonth(nextDueDateObj.getMonth() + 1);
+
+            await updateDoc(userNattRef, {
+              totalPaid: newTotalPaid,
+              remainingBalance: newRemaining,
+              paidInstallmentsCount: newPaidCount,
+              lastPaymentDate: now.toISOString(),
+              nextDueDate: nextDueDateObj.toISOString(),
+              updatedAt: now.toISOString(),
+            });
+
+            // Log contribution transaction in Firestore
+            const txId = `tx-contrib-${Date.now()}`;
+            await setDoc(doc(db, 'transactions', txId), {
+              transactionId: txId,
+              userNattId: selectedTontine.id,
+              userId: effectiveUserId,
+              type: 'NATT_CONTRIBUTION',
+              amount: selectedTontine.amountPerCycle,
+              gateway: providerKey,
+              gatewayReference: `${providerKey}-REF-${Date.now()}`,
+              status: 'SUCCESS',
+              createdAt: now.toISOString(),
+            }, { merge: true });
+          }
+        } catch (fErr) {
+          console.warn('Direct Firestore contribution write notice:', fErr);
+        }
+      }
+
+      // 2. Call NestJS backend API via processContributionMutation
+      await processContributionMutation.mutateAsync({
+        userNattId: selectedTontine.id,
+        userId: effectiveUserId,
+        amount: selectedTontine.amountPerCycle,
+        paymentMethod: providerKey,
+      });
+
+      refetch();
       setPaymentSuccess(true);
-    }, 1200);
+    } catch (err: any) {
+      console.error('Error executing contribution payment:', err);
+      Alert.alert('Erreur', err?.message || 'Impossible d\'effectuer le versement. Veuillez réessayer.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCloseModal = () => {
     setSelectedTontine(null);
     setPaymentSuccess(false);
+    refetch();
   };
 
   return (
@@ -142,7 +211,7 @@ export default function ContributeScreen() {
                 </View>
               </View>
 
-              <View className="bg-slate-50 rounded-2xl p-3.5 mb-4 border border-gray-100 flex-row justify-between items-center">
+              <View className="bg-slate-50 rounded-2xl p-3.5 mb-3 border border-gray-100 flex-row justify-between items-center">
                 <View>
                   <Text className="text-[10px] text-gray-400 uppercase font-semibold">
                     Montant de la cotisation
@@ -159,6 +228,17 @@ export default function ContributeScreen() {
                     {tontine.myContributionFcfa.toLocaleString('fr-FR')} FCFA
                   </Text>
                 </View>
+              </View>
+
+              {/* Next Due Date Banner */}
+              <View className="flex-row items-center justify-between bg-emerald-50/80 px-3.5 py-2.5 rounded-2xl border border-emerald-200/80 mb-3">
+                <View className="flex-row items-center space-x-2">
+                  <CalendarIcon size={16} color="#19A66A" />
+                  <Text className="text-xs font-bold text-emerald-900">Prochaine Échéance :</Text>
+                </View>
+                <Text className="text-xs font-black text-[#173F73]">
+                  {tontine.nextTurnDate || 'Non définie'}
+                </Text>
               </View>
 
               {/* Pay Button for this tontine */}

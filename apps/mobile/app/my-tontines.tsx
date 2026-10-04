@@ -5,20 +5,20 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TontineIcon, BellIcon } from '../components/Icons';
+import { TontineIcon, BellIcon, CalendarIcon } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useDashboardSummary } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 
-type StatusFilterType = 'active' | 'pending' | 'completed';
+type StatusFilterType = 'active' | 'completed';
 
 export interface ExtendedTontineItem extends ActiveTontineItem {
-  statusCategory: 'active' | 'pending' | 'completed';
+  statusCategory: 'active' | 'completed';
   startDateInfo?: string;
   payoutDateInfo?: string;
 }
@@ -34,19 +34,18 @@ export default function MyTontinesScreen() {
     }
   }, [isAuthenticated, user, router]);
 
-  const userPhoneOrId = user?.phoneNumber || user?.paymentPhoneNumber;
+  const userPhoneOrId = user?.uid || user?.id || user?.phoneNumber || user?.paymentPhoneNumber;
   const { data: dashboardData, isLoading, refetch } = useDashboardSummary(userPhoneOrId);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('active');
+  const [selectedDetailsTontine, setSelectedDetailsTontine] = useState<ExtendedTontineItem | null>(null);
 
   const apiTontines: ActiveTontineItem[] = dashboardData?.tontines || [];
 
   const allTontines: ExtendedTontineItem[] = apiTontines.map((item) => {
-    let statusCategory: 'active' | 'pending' | 'completed' = 'active';
+    let statusCategory: 'active' | 'completed' = 'active';
     if (item.status === 'COMPLETED') {
       statusCategory = 'completed';
-    } else if (item.status === 'PENDING') {
-      statusCategory = 'pending';
     }
 
     return {
@@ -62,8 +61,52 @@ export default function MyTontinesScreen() {
   );
 
   const activeCount = allTontines.filter((t) => t.statusCategory === 'active').length;
-  const pendingCount = allTontines.filter((t) => t.statusCategory === 'pending').length;
   const completedCount = allTontines.filter((t) => t.statusCategory === 'completed').length;
+
+  const getInstallmentsSchedule = (tontine: ExtendedTontineItem) => {
+    const totalTours = tontine.totalTours || 10;
+    const currentTurn = tontine.statusCategory === 'completed' ? totalTours : (tontine.currentTurn || 1);
+    const catLower = (tontine.category || '').toLowerCase();
+    const isDaily = catLower.includes('jour') || catLower.includes('daily');
+    const isWeekly = catLower.includes('hebdo') || catLower.includes('weekly');
+
+    let baseDate = new Date();
+    if (tontine.nextTurnDate) {
+      const parsed = new Date(tontine.nextTurnDate);
+      if (!isNaN(parsed.getTime())) baseDate = parsed;
+    }
+
+    const monthsFr = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+
+    const list = [];
+    for (let i = 1; i <= totalTours; i++) {
+      const isPaid = i <= currentTurn;
+      const diff = i - currentTurn;
+      const itemDate = new Date(baseDate);
+
+      if (isDaily) {
+        itemDate.setDate(itemDate.getDate() + diff);
+      } else if (isWeekly) {
+        itemDate.setDate(itemDate.getDate() + (diff * 7));
+      } else {
+        itemDate.setMonth(itemDate.getMonth() + diff);
+      }
+
+      const formattedDate = `${itemDate.getDate()} ${monthsFr[itemDate.getMonth()]} ${itemDate.getFullYear()}`;
+
+      list.push({
+        turnNumber: i,
+        formattedDate,
+        isPaid,
+        amount: tontine.amountPerCycle,
+      });
+    }
+
+    return list;
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-brand-beige">
@@ -102,7 +145,7 @@ export default function MyTontinesScreen() {
 
       {/* Main Content */}
       <ScrollView className="flex-1 px-5 pt-4 pb-8" showsVerticalScrollIndicator={false}>
-        {/* ==================== 3 STATUS FILTER TABS ==================== */}
+        {/* ==================== 2 STATUS FILTER TABS ==================== */}
         <View className="flex-row space-x-2 mb-5">
           {/* Tab 1: Actif (Selected by default) */}
           <TouchableOpacity
@@ -121,24 +164,7 @@ export default function MyTontinesScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 2: En attente */}
-          <TouchableOpacity
-            onPress={() => setStatusFilter('pending')}
-            activeOpacity={0.8}
-            className={`flex-1 py-2.5 px-1 rounded-2xl border items-center ${statusFilter === 'pending'
-              ? 'bg-[#173F73] border-[#173F73] shadow-sm'
-              : 'bg-white border-gray-200'
-              }`}
-          >
-            <Text
-              className={`text-xs font-black ${statusFilter === 'pending' ? 'text-[#19A66A]' : 'text-gray-600'
-                }`}
-            >
-              En attente ({pendingCount})
-            </Text>
-          </TouchableOpacity>
-
-          {/* Tab 3: Terminé */}
+          {/* Tab 2: Terminé */}
           <TouchableOpacity
             onPress={() => setStatusFilter('completed')}
             activeOpacity={0.8}
@@ -172,16 +198,12 @@ export default function MyTontinesScreen() {
             <Text className="text-lg font-black text-brand-dark text-center mb-2">
               {statusFilter === 'active'
                 ? 'Aucune tontine active'
-                : statusFilter === 'pending'
-                  ? 'Aucune tontine en attente'
-                  : 'Aucune tontine terminée'}
+                : 'Aucune tontine terminée'}
             </Text>
             <Text className="text-xs text-gray-500 text-center leading-relaxed mb-6">
               {statusFilter === 'active'
                 ? 'Vous n\'avez pas de cercle d\'épargne actif pour le moment. Découvrez nos formules pour commencer !'
-                : statusFilter === 'pending'
-                  ? 'Vous n\'avez pas de souscription en attente de démarrage.'
-                  : 'Vos tontines terminées apparaîtront ici avec le récapitulatif des gants perçus.'}
+                : 'Vos tontines terminées apparaîtront ici avec le récapitulatif des gains perçus.'}
             </Text>
             <TouchableOpacity
               onPress={() => router.push('/contribute')}
@@ -218,13 +240,6 @@ export default function MyTontinesScreen() {
                     </Text>
                   </View>
                 )}
-                {tontine.statusCategory === 'pending' && (
-                  <View className="px-3 py-1 bg-amber-50 rounded-full border border-amber-200">
-                    <Text className="text-[10px] font-extrabold text-amber-800 uppercase">
-                      En attente
-                    </Text>
-                  </View>
-                )}
                 {tontine.statusCategory === 'completed' && (
                   <View className="px-3 py-1 bg-cyan-50 rounded-full border border-cyan-200">
                     <Text className="text-[10px] font-extrabold text-cyan-800 uppercase">
@@ -254,17 +269,6 @@ export default function MyTontinesScreen() {
                 </View>
               )}
 
-              {tontine.statusCategory === 'pending' && (
-                <View className="my-3 bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200">
-                  <Text className="text-xs font-bold text-amber-900 mb-0.5">
-                    Formation du groupe en cours
-                  </Text>
-                  <Text className="text-[11px] text-amber-800 font-medium">
-                    {tontine.startDateInfo || 'Lancement prévu prochainement.'}
-                  </Text>
-                </View>
-              )}
-
               {tontine.statusCategory === 'completed' && (
                 <View className="my-3 bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-200">
                   <Text className="text-xs font-bold text-emerald-900 mb-0.5">
@@ -276,8 +280,8 @@ export default function MyTontinesScreen() {
                 </View>
               )}
 
-              {/* Details & Actions */}
-              <View className="flex-row justify-between items-center pt-3 border-t border-gray-100">
+              {/* Details Footer */}
+              <View className="pt-3 border-t border-gray-100 flex-row justify-between items-center">
                 <View>
                   <Text className="text-[10px] text-gray-400 font-semibold uppercase">
                     {tontine.statusCategory === 'completed' ? 'Gain total perçu' : 'Mon total cotisé'}
@@ -287,51 +291,141 @@ export default function MyTontinesScreen() {
                   </Text>
                 </View>
 
-                {tontine.statusCategory === 'active' && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      Alert.alert(
-                        'Cotisation instantanée',
-                        `Procéder au versement de ${tontine.amountPerCycle.toLocaleString('fr-FR')} FCFA pour ${tontine.name} via :`,
-                        [
-                          { text: 'Wave', onPress: () => Alert.alert('Wave Sénégal', 'Paiement Wave prêt !') },
-                          { text: 'Orange Money', onPress: () => Alert.alert('Orange Money', 'Paiement OM prêt !') },
-                          { text: 'Annuler', style: 'cancel' },
-                        ]
-                      );
-                    }}
-                    activeOpacity={0.85}
-                    className="px-5 py-3 bg-[#173F73] active:bg-[#1A4A82] rounded-2xl shadow-sm border border-[#19A66A]/30"
-                  >
-                    <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">RÉGLES</Text>
-                  </TouchableOpacity>
-                )}
-
-                {tontine.statusCategory === 'pending' && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      Alert.alert(
-                        'Détails du Cercle',
-                        `${tontine.name} : ${tontine.startDateInfo || 'Tirage des tours bientôt disponible.'}`
-                      );
-                    }}
-                    activeOpacity={0.85}
-                    className="px-4 py-2.5 bg-amber-100 active:bg-amber-200 border border-amber-300 rounded-2xl"
-                  >
-                    <Text className="text-xs font-black text-amber-900 uppercase">DÉTAILS</Text>
-                  </TouchableOpacity>
-                )}
-
-                {tontine.statusCategory === 'completed' && (
-                  <View className="px-4 py-2.5 bg-emerald-100 rounded-2xl border border-emerald-300">
-                    <Text className="text-xs font-black text-emerald-900 uppercase">REÇU ✓</Text>
-                  </View>
-                )}
+                <TouchableOpacity
+                  onPress={() => setSelectedDetailsTontine(tontine)}
+                  activeOpacity={0.8}
+                  className="px-4 py-2.5 bg-[#173F73] active:bg-[#1A4A82] rounded-2xl border border-[#19A66A]/30 flex-row items-center space-x-1.5 shadow-sm"
+                >
+                  <CalendarIcon size={14} color="#19A66A" />
+                  <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
+                    Détails
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))
         )}
       </ScrollView>
+
+      {/* MODAL DETAILS ÉCHÉANCIER */}
+      <Modal visible={Boolean(selectedDetailsTontine)} animationType="slide" transparent>
+        <View className="flex-1 justify-end bg-black/65">
+          <View className="bg-white rounded-t-[32px] p-6 max-h-[85%] shadow-2xl">
+            {/* Header */}
+            <View className="flex-row justify-between items-center mb-4 pb-3 border-b border-gray-100">
+              <View className="flex-1 pr-2">
+                <Text className="text-lg font-black text-brand-dark uppercase tracking-tight">
+                  Échéancier des Versements
+                </Text>
+                <Text className="text-xs text-gray-500 font-semibold mt-0.5">
+                  {selectedDetailsTontine?.name} ({selectedDetailsTontine?.category})
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setSelectedDetailsTontine(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
+              >
+                <Text className="text-sm font-bold text-gray-500">✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedDetailsTontine && (
+              <View className="flex-1">
+                {/* Stats Summary Bar */}
+                <View className="bg-[#FDFBF7] p-3.5 rounded-2xl border border-gray-200 mb-4 flex-row justify-between items-center">
+                  <View>
+                    <Text className="text-[10px] text-gray-400 font-extrabold uppercase">Montant par Tour</Text>
+                    <Text className="text-sm font-black text-[#173F73]">
+                      {selectedDetailsTontine.amountPerCycle.toLocaleString('fr-FR')} FCFA
+                    </Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-[10px] text-gray-400 font-extrabold uppercase">Cotisé / Objectif</Text>
+                    <Text className="text-sm font-black text-[#19A66A]">
+                      {selectedDetailsTontine.myContributionFcfa.toLocaleString('fr-FR')} FCFA
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Timeline Header */}
+                <View className="flex-row justify-between items-center mb-2 px-1">
+                  <Text className="text-xs font-black text-gray-400 uppercase tracking-wider">
+                    Liste des Tours & Échéances
+                  </Text>
+                  <Text className="text-xs font-bold text-emerald-700">
+                    {selectedDetailsTontine.statusCategory === 'completed'
+                      ? 'Tout est réglé 🎉'
+                      : `${selectedDetailsTontine.currentTurn} / ${selectedDetailsTontine.totalTours} tour(s)`}
+                  </Text>
+                </View>
+
+                {/* Installments Timeline List */}
+                <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                  <View className="space-y-2.5 py-1">
+                    {getInstallmentsSchedule(selectedDetailsTontine).map((item) => (
+                      <View
+                        key={item.turnNumber}
+                        className={`p-3.5 rounded-2xl border flex-row items-center justify-between ${item.isPaid
+                            ? 'bg-emerald-50/70 border-emerald-200'
+                            : 'bg-white border-gray-200'
+                          }`}
+                      >
+                        <View className="flex-row items-center space-x-3">
+                          <View
+                            className={`w-8 h-8 rounded-full items-center justify-center ${item.isPaid ? 'bg-emerald-500' : 'bg-gray-200'
+                              }`}
+                          >
+                            {item.isPaid ? (
+                              <Text className="text-white text-xs font-black">✓</Text>
+                            ) : (
+                              <Text className="text-gray-600 text-xs font-bold">{item.turnNumber}</Text>
+                            )}
+                          </View>
+
+                          <View>
+                            <Text className={`text-xs font-black ${item.isPaid ? 'text-emerald-900' : 'text-brand-dark'}`}>
+                              Tour #{item.turnNumber} — {item.amount.toLocaleString('fr-FR')} FCFA
+                            </Text>
+                            <Text className="text-[11px] text-gray-500 font-semibold mt-0.5">
+                              {item.formattedDate}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Status Tag */}
+                        <View
+                          className={`px-3 py-1 rounded-full ${item.isPaid
+                              ? 'bg-emerald-100 border border-emerald-300'
+                              : 'bg-amber-100 border border-amber-300'
+                            }`}
+                        >
+                          <Text
+                            className={`text-[10px] font-black uppercase ${item.isPaid ? 'text-emerald-800' : 'text-amber-900'
+                              }`}
+                          >
+                            {item.isPaid ? 'Effectué' : 'À venir'}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                {/* Close Action Button */}
+                <TouchableOpacity
+                  onPress={() => setSelectedDetailsTontine(null)}
+                  activeOpacity={0.85}
+                  className="w-full bg-[#173F73] py-3.5 rounded-2xl items-center mt-4 shadow-sm border border-[#19A66A]/30"
+                >
+                  <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
+                    FERMER
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

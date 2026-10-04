@@ -24,7 +24,15 @@ export const Clients: React.FC<ClientsProps> = ({
   );
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
-  const selectedClientSubs = subscriptions.filter(s => s.clientId === selectedClientId);
+  const selectedClientSubs = subscriptions.filter(s => {
+    if (s.clientId === selectedClientId) return true;
+    if (selectedClient && selectedClient.phone && s.clientPhone) {
+      const cleanSelectedPhone = selectedClient.phone.replace(/[\+\s\-]/g, '');
+      const cleanSubPhone = s.clientPhone.replace(/[\+\s\-]/g, '');
+      return cleanSelectedPhone && cleanSubPhone && cleanSelectedPhone === cleanSubPhone;
+    }
+    return false;
+  });
 
   return (
     <div>
@@ -52,9 +60,9 @@ export const Clients: React.FC<ClientsProps> = ({
         <div className="glass-card">
           <div style={{ position: 'relative', marginBottom: '1rem' }}>
             <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="text" 
-              className="form-input" 
+            <input
+              type="text"
+              className="form-input"
               placeholder="Chercher client (Nom, Tel)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -111,7 +119,6 @@ export const Clients: React.FC<ClientsProps> = ({
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{selectedClient.fullName}</h3>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', marginTop: '0.25rem' }}>
                       <span><Phone size={12} style={{ display: 'inline', marginRight: '4px' }} />{selectedClient.phone}</span>
-                      <span><Mail size={12} style={{ display: 'inline', marginRight: '4px' }} />{selectedClient.email}</span>
                     </div>
                   </div>
 
@@ -176,7 +183,7 @@ export const Clients: React.FC<ClientsProps> = ({
 
                       {sub.status === 'ELIGIBLE_PAYOUT' && (
                         <div style={{ marginTop: '1rem', textAlign: 'right' }}>
-                          <button 
+                          <button
                             className="btn btn-gold btn-sm"
                             onClick={() => onOpenPayoutModal(sub)}
                           >

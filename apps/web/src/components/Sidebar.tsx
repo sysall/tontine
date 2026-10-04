@@ -39,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'kyc',
-      label: 'Vérification KYC & OCR',
+      label: 'Vérification KYC',
       icon: FileCheck,
       badge: pendingKycCount > 0 ? `${pendingKycCount} à checker` : null,
       badgeColor: 'gold',

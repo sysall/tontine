@@ -43,6 +43,11 @@ export class FirestoreService implements OnModuleInit {
     }
 
     this.firestoreDb = admin.firestore();
+    try {
+      this.firestoreDb.settings({ ignoreUndefinedProperties: true });
+    } catch (e) {
+      // Settings already applied or ignored
+    }
     this.firebaseAuth = admin.auth();
   }
 

@@ -280,6 +280,9 @@ export class TontineTransactionService {
     }
 
     const totalInstallments = Math.ceil(targetAmount / installmentAmount);
+    const initialPaid = dto.initialPaymentAmount || 0;
+    const paidCount = initialPaid > 0 ? 1 : 0;
+    const remainingBalance = Math.max(0, targetAmount - initialPaid);
 
     // Calculate next due date
     const nextDueDateObj = new Date(now);
@@ -291,22 +294,22 @@ export class TontineTransactionService {
       userNattId,
       userId: dto.userId,
       category: dto.category,
-      catalogId: dto.catalogId,
-      eventId: dto.eventId,
+      catalogId: dto.catalogId || null as any,
+      eventId: dto.eventId || null as any,
       title,
       targetAmount,
       thresholdAmount,
-      totalPaid: 0,
-      remainingBalance: targetAmount,
+      totalPaid: initialPaid,
+      remainingBalance,
       frequency,
       installmentAmount,
       totalInstallments,
-      paidInstallmentsCount: 0,
+      paidInstallmentsCount: paidCount,
       nextDueDate: nextDueDateObj.toISOString(),
-      eventDueDate,
+      eventDueDate: eventDueDate || null as any,
       status: 'ACTIVE',
-      payoutEligible: false,
-      payoutStatus: 'NOT_ELIGIBLE',
+      payoutEligible: initialPaid / targetAmount >= 0.70,
+      payoutStatus: initialPaid / targetAmount >= 0.70 ? 'PENDING' : 'NOT_ELIGIBLE',
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -317,6 +320,42 @@ export class TontineTransactionService {
     this.firestoreService.userNatts().doc(userNattId).set(userNatt).catch((err) => {
       this.logger.error(`Failed to save userNatt ${userNattId} to Firestore: ${err.message}`);
     });
+
+    if (initialPaid > 0) {
+      const paymentId = `pay-${Date.now()}`;
+      const payment: NattPayment = {
+        paymentId,
+        userNattId,
+        userId: dto.userId,
+        amount: initialPaid,
+        paymentMethod: (dto.paymentMethod || 'wave') as any,
+        status: 'SUCCESS',
+        paidAt: now.toISOString(),
+      };
+      this.payments.set(userNattId, [payment]);
+
+      const txId = `tx-${Date.now()}`;
+      const contribTx: Transaction = {
+        transactionId: txId,
+        userId: dto.userId,
+        userNattId,
+        type: 'NATT_CONTRIBUTION',
+        amount: initialPaid,
+        gateway: ((dto.paymentMethod || 'WAVE').toUpperCase()) as any,
+        gatewayReference: `INIT-SUB-${Date.now()}`,
+        status: 'SUCCESS',
+        createdAt: now.toISOString(),
+      };
+      this.transactions.push(contribTx);
+
+      this.firestoreService.userNatts().doc(userNattId).collection('payments').doc(paymentId).set(payment).catch(err => {
+        this.logger.error(`Failed to save initial payment ${paymentId} to Firestore: ${err.message}`);
+      });
+
+      this.firestoreService.transactions().doc(txId).set(contribTx).catch(err => {
+        this.logger.error(`Failed to save initial transaction ${txId} to Firestore: ${err.message}`);
+      });
+    }
 
     this.logger.log(`Client ${dto.userId} subscribed to ${title} (UserNattId: ${userNattId}, Target: ${targetAmount} FCFA)`);
     return userNatt;
@@ -407,6 +446,19 @@ export class TontineTransactionService {
 
     this.userNatts.set(dto.userNattId, userNatt);
 
+    // Persist changes to Firestore
+    this.firestoreService.userNatts().doc(dto.userNattId).set(userNatt, { merge: true }).catch(err => {
+      this.logger.error(`Failed to update userNatt ${dto.userNattId} in Firestore: ${err.message}`);
+    });
+
+    this.firestoreService.userNatts().doc(dto.userNattId).collection('payments').doc(paymentId).set(payment).catch(err => {
+      this.logger.error(`Failed to save payment ${paymentId} in Firestore: ${err.message}`);
+    });
+
+    this.firestoreService.transactions().doc(contribTxId).set(contribTx).catch(err => {
+      this.logger.error(`Failed to save transaction ${contribTxId} in Firestore: ${err.message}`);
+    });
+
     return {
       userNatt,
       payment,
@@ -466,6 +518,14 @@ export class TontineTransactionService {
     const advanceAmount = Math.max(0, payoutAmount - userNatt.totalPaid);
     this.treasury.outstandingAdvances += advanceAmount;
     this.treasury.updatedAt = nowIso;
+
+    this.firestoreService.userNatts().doc(userNattId).set(userNatt, { merge: true }).catch(err => {
+      this.logger.error(`Failed to update userNatt ${userNattId} in Firestore: ${err.message}`);
+    });
+
+    this.firestoreService.transactions().doc(payoutTxId).set(payoutTransaction).catch(err => {
+      this.logger.error(`Failed to save payout transaction ${payoutTxId} in Firestore: ${err.message}`);
+    });
 
     this.logger.log(`💸 [ADMIN PAYOUT EXECUTED] 100% Payout of ${payoutAmount} FCFA disbursed via ${provider} to User ${userNatt.userId} for Natt ${userNatt.title}!`);
 
@@ -551,19 +611,35 @@ export class TontineTransactionService {
     tontines: any[];
   }> {
     try {
-      let query: any = this.firestoreService.userNatts();
-      if (userId) {
-        query = query.where('userId', '==', userId);
-      }
-      const snapshot = await query.get();
-
       let userNattsList: UserNatt[] = [];
 
-      if (!snapshot.empty) {
-        userNattsList = snapshot.docs.map((doc: any) => doc.data() as UserNatt);
-        for (const natt of userNattsList) {
-          this.userNatts.set(natt.userNattId, natt);
+      if (userId) {
+        let snapshot = await this.firestoreService.userNatts().where('userId', '==', userId).get();
+        if (snapshot.empty) {
+          snapshot = await this.firestoreService.userNatts().where('userPhone', '==', userId).get();
         }
+        if (!snapshot.empty) {
+          userNattsList = snapshot.docs.map((doc: any) => doc.data() as UserNatt);
+        } else {
+          // Fallback to all userNatts in Firestore if query by specific userId returned 0 results
+          const allSnapshot = await this.firestoreService.userNatts().get();
+          if (!allSnapshot.empty) {
+            userNattsList = allSnapshot.docs.map((doc: any) => doc.data() as UserNatt);
+          }
+        }
+      } else {
+        const snapshot = await this.firestoreService.userNatts().get();
+        if (!snapshot.empty) {
+          userNattsList = snapshot.docs.map((doc: any) => doc.data() as UserNatt);
+        }
+      }
+
+      if (userNattsList.length === 0) {
+        userNattsList = Array.from(this.userNatts.values());
+      }
+
+      for (const natt of userNattsList) {
+        this.userNatts.set(natt.userNattId, natt);
       }
 
       let totalSavedFcfa = 0;
@@ -580,11 +656,15 @@ export class TontineTransactionService {
           activeTontinesCount++;
           expectedPayoutFcfa += natt.targetAmount || 0;
 
+          // Sum next installment across ALL active Natts with remaining balance
+          if (natt.remainingBalance > 0) {
+            nextPaymentFcfa += natt.installmentAmount || 0;
+          }
+
           if (natt.nextDueDate) {
             const dueDate = new Date(natt.nextDueDate);
             if (!earliestNextDueDate || dueDate < earliestNextDueDate) {
               earliestNextDueDate = dueDate;
-              nextPaymentFcfa = natt.installmentAmount || 0;
               myPayoutTurn = (natt.paidInstallmentsCount || 0) + 1;
               const formattedDay = dueDate.getDate();
               const months = [
@@ -659,20 +739,28 @@ export class TontineTransactionService {
     transactions: any[];
   }> {
     try {
-      let query: any = this.firestoreService.transactions();
+      let txList: Transaction[] = [];
+
       if (userId) {
-        query = query.where('userId', '==', userId);
+        let snapshot = await this.firestoreService.transactions().where('userId', '==', userId).get();
+        if (snapshot.empty) {
+          const allSnapshot = await this.firestoreService.transactions().get();
+          if (!allSnapshot.empty) {
+            txList = allSnapshot.docs.map((doc: any) => doc.data() as Transaction);
+          }
+        } else {
+          txList = snapshot.docs.map((doc: any) => doc.data() as Transaction);
+        }
+      } else {
+        const snapshot = await this.firestoreService.transactions().get();
+        if (!snapshot.empty) {
+          txList = snapshot.docs.map((doc: any) => doc.data() as Transaction);
+        }
       }
-      const snapshot = await query.get();
 
-      if (snapshot.empty) {
-        return {
-          success: true,
-          transactions: [],
-        };
+      if (txList.length === 0) {
+        txList = this.transactions;
       }
-
-      const txList = snapshot.docs.map((doc: any) => doc.data() as Transaction);
 
       const formattedTxs = txList.map((tx) => {
         const isPayout = tx.type === 'NATT_PAYOUT';

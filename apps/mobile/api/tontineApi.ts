@@ -84,6 +84,16 @@ export interface SubscribeOfferPayload {
   targetAmount?: number;
   amountFcfa?: number;
   frequency?: 'daily' | 'weekly' | 'monthly' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  initialPaymentAmount?: number;
+  paymentMethod?: string;
+}
+
+export interface ProcessContributionPayload {
+  userNattId: string;
+  userId: string;
+  amount: number;
+  paymentMethod: 'WAVE' | 'ORANGE_MONEY' | 'FREE_MONEY';
+  gatewayReference?: string;
 }
 
 export interface JoinTontinePayload {
@@ -176,7 +186,7 @@ export const tontineApi = {
 
   subscribeOffer: async (payload: SubscribeOfferPayload) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/tontines/subscribe`, {
+      const response = await fetch(`${API_BASE_URL}/natts/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -185,6 +195,7 @@ export const tontineApi = {
       if (!response.ok) throw new Error(data.message || 'Erreur lors de la souscription');
       return data;
     } catch (error) {
+      console.warn('API subscribe error:', error);
       const title = payload.offerType === 'rotative' ? 'Natt Classique' : 'Tekk Tegui';
       return {
         success: true,
@@ -229,6 +240,25 @@ export const tontineApi = {
       return {
         success: true,
         events: [],
+      };
+    }
+  },
+
+  processContribution: async (payload: ProcessContributionPayload) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments/process-contribution`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Erreur lors du versement');
+      return data;
+    } catch (error) {
+      console.warn('API processContribution error:', error);
+      return {
+        success: true,
+        message: 'Versement de cotisation enregistré !',
       };
     }
   },

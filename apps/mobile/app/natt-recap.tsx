@@ -138,8 +138,8 @@ export default function NattRecapScreen() {
         userId: effectiveUserId,
         userPhone: user?.phoneNumber || '',
         category: isEvent ? 'EVENT' : 'PERMANENT',
-        catalogId,
-        eventId: params.eventId || undefined,
+        catalogId: catalogId || null,
+        eventId: params.eventId || null,
         title: offerTitle,
         targetAmount,
         thresholdAmount: threshold70Amount,
@@ -152,7 +152,7 @@ export default function NattRecapScreen() {
         lastPaymentDate: now.toISOString(),
         paymentMethod: selectedProvider,
         nextDueDate: nextDueDateObj.toISOString(),
-        eventDueDate: params.eventDueDate || undefined,
+        eventDueDate: params.eventDueDate || null,
         status: 'ACTIVE',
         payoutEligible: false,
         payoutStatus: 'NOT_ELIGIBLE',
@@ -194,7 +194,7 @@ export default function NattRecapScreen() {
         }
       }
 
-      // 2. Appeler l'API NestJS via React Query Hook
+      // 2. Appeler l'API NestJS via React Query Hook (enregistrement centralisé Firestore via Firebase Admin SDK)
       try {
         await subscribeOfferMutation.mutateAsync({
           userId: effectiveUserId,
@@ -204,9 +204,11 @@ export default function NattRecapScreen() {
           targetAmount,
           frequency: freqUpper,
           customTitle: offerTitle,
+          initialPaymentAmount: parsedInstallment,
+          paymentMethod: selectedProvider,
         });
       } catch (apiErr) {
-        console.warn('API NestJS subscription fallback, écriture Firestore déjà effectuée:', apiErr);
+        console.warn('API NestJS subscription fallback, écriture Firestore directe exécutée:', apiErr);
       }
 
       setIsPaymentModalOpen(false);

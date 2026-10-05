@@ -27,8 +27,7 @@ import { useNotificationStore } from '../store/useNotificationStore';
 import { authApi } from '../api/authApi';
 import { kycApi } from '../api/kycApi';
 import { KycUploadModal } from '../components/KycUploadModal';
-import { db, auth } from '../config/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth } from '../config/firebase';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -139,16 +138,6 @@ export default function ProfileScreen() {
         await authApi.updateProfileName(userPhone, trimmedName);
       }
 
-      // 2. Mise à jour directe via SDK Firestore si disponible
-      if (db && auth?.currentUser?.uid) {
-        try {
-          const userDocRef = doc(db, 'users', auth.currentUser.uid);
-          await setDoc(userDocRef, { fullName: trimmedName, updatedAt: new Date().toISOString() }, { merge: true });
-        } catch (fErr) {
-          console.warn('Erreur mise à jour SDK Firestore direct:', fErr);
-        }
-      }
-
       // 3. Mise à jour du store Zustand local
       updateProfileName(trimmedName);
       setIsEditNameModalOpen(false);
@@ -187,16 +176,6 @@ export default function ProfileScreen() {
     try {
       // 1. Mise à jour dans Firestore via l'API NestJS
       await authApi.updatePaymentMethod(userPhone, provider, phone);
-
-      // 2. Mise à jour directe via SDK Firestore si disponible
-      if (db && auth?.currentUser?.uid) {
-        try {
-          const userDocRef = doc(db, 'users', auth.currentUser.uid);
-          await setDoc(userDocRef, { defaultPaymentProvider: provider, paymentPhoneNumber: phone, updatedAt: new Date().toISOString() }, { merge: true });
-        } catch (fErr) {
-          console.warn('Erreur mise à jour SDK Firestore payment method:', fErr);
-        }
-      }
 
       // 3. Mise à jour du store Zustand local
       updatePaymentMethod(provider, phone);

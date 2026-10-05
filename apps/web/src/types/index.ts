@@ -81,6 +81,7 @@ export interface EventNattItem {
   targetAmountFcfa: number;
   subscribersCount: number;
   emoji: string;
+  status?: 'ACTIVE' | 'INACTIVE';
   isDeletable?: boolean;
 }
 

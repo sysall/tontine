@@ -163,12 +163,17 @@ export default function LoginScreen() {
 
       // 3. Update Zustand Store State
       const userId = res.user?.uid || res.user?.id;
+      const cleanLocalPhone = phoneNumber.replace(/[^\d]/g, '').slice(-9);
+      const formattedDefaultName = cleanLocalPhone.length === 9 
+        ? `Membre (+221 ${cleanLocalPhone.slice(0, 2)} ${cleanLocalPhone.slice(2, 5)} ${cleanLocalPhone.slice(5, 7)} ${cleanLocalPhone.slice(7)})`
+        : `Membre (${phoneNumber})`;
+
       setAuth(
         {
           uid: userId,
           id: userId,
           phoneNumber: res.user?.phoneNumber || fullPhone,
-          fullName: res.user?.fullName || fullName.trim() || 'Membre Tontine',
+          fullName: res.user?.fullName || (fullName.trim() ? fullName.trim() : formattedDefaultName),
           isVerified: true,
         },
         res.token || idToken

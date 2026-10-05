@@ -17,8 +17,7 @@ import {
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSubscribeOffer } from '../api/useTontine';
-import { db, auth } from '../config/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth } from '../config/firebase';
 
 export default function NattRecapScreen() {
   const router = useRouter();
@@ -160,56 +159,21 @@ export default function NattRecapScreen() {
         updatedAt: now.toISOString(),
       };
 
-      // 1. Écriture directe dans Firestore (/user_natts/{userNattId})
-      if (db) {
-        try {
-          const userNattRef = doc(db, 'user_natts', userNattId);
-          await setDoc(userNattRef, newNattRecord, { merge: true });
+      // Exécution de la souscription 100% via l'API NestJS
+      await subscribeOfferMutation.mutateAsync({
+        userId: effectiveUserId,
+        userPhone: user?.phoneNumber || user?.paymentPhoneNumber || effectiveUserId,
+        category: isEvent ? 'EVENT' : 'PERMANENT',
+        catalogId,
+        eventId: params.eventId,
+        targetAmount,
+        frequency: freqUpper,
+        customTitle: offerTitle,
+        initialPaymentAmount: parsedInstallment,
+        paymentMethod: selectedProvider,
+      });
 
-          // Log de la transaction initiale pour le 1er versement
-          const txId = `tx-${Date.now()}`;
-          const txRef = doc(db, 'transactions', txId);
-          await setDoc(txRef, {
-            id: txId,
-            userNattId,
-            userId: effectiveUserId,
-            amount: parsedInstallment,
-            type: 'CONTRIBUTION',
-            provider: selectedProvider,
-            status: 'SUCCESS',
-            description: `1ᵉʳ versement - ${offerTitle}`,
-            createdAt: now.toISOString(),
-          }, { merge: true });
-
-          // Mettre également à jour les statistiques de l'utilisateur dans /users/{userId}
-          const userRef = doc(db, 'users', effectiveUserId);
-          await setDoc(userRef, {
-            kycStatus: user?.isVerified ? 'VERIFIED' : 'PENDING_MANUAL_CHECK',
-            updatedAt: now.toISOString(),
-          }, { merge: true });
-
-          console.log(`Natt & 1er versement enregistrés avec succès dans Firestore : ${userNattId}`);
-        } catch (fErr) {
-          console.warn('Erreur écriture Firestore userNatt:', fErr);
-        }
-      }
-
-      // 2. Appeler l'API NestJS via React Query Hook (enregistrement centralisé Firestore via Firebase Admin SDK)
-      try {
-        await subscribeOfferMutation.mutateAsync({
-          userId: effectiveUserId,
-          category: isEvent ? 'EVENT' : 'PERMANENT',
-          catalogId,
-          eventId: params.eventId,
-          targetAmount,
-          frequency: freqUpper,
-          customTitle: offerTitle,
-          initialPaymentAmount: parsedInstallment,
-          paymentMethod: selectedProvider,
-        });
-      } catch (apiErr) {
-        console.warn('API NestJS subscription fallback, écriture Firestore directe exécutée:', apiErr);
-      }
+      console.log(`[API] Souscription et 1er versement enregistrés via l'API pour l'utilisateur ${effectiveUserId}`);
 
       setIsPaymentModalOpen(false);
       setIsSuccessModalOpen(true);

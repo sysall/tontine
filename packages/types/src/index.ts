@@ -5,7 +5,7 @@
 
 export type NattFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 export type PermanentCatalogId = 'natt_classique' | 'tekk_tegui';
-export type EventNattStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'DELETED';
+export type EventNattStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'DELETED' | 'INACTIVE';
 export type UserNattCategory = 'PERMANENT' | 'EVENT';
 export type UserNattStatus = 'ACTIVE' | 'PAYOUT_UNLOCKED' | 'PAYOUT_SENT' | 'COMPLETED' | 'DEFAULTED';
 export type PayoutStatus = 'NOT_ELIGIBLE' | 'PENDING' | 'PAID';
@@ -54,6 +54,7 @@ export interface EventNatt {
 export interface UserNatt {
   userNattId: string;
   userId: string;
+  userPhone?: string;
   category: UserNattCategory;
   catalogId?: PermanentCatalogId;
   eventId?: string | null;

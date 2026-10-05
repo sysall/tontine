@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { TontineIcon, BellIcon, CalendarIcon } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
@@ -36,6 +36,12 @@ export default function MyTontinesScreen() {
 
   const userPhoneOrId = user?.uid || user?.id || user?.phoneNumber || user?.paymentPhoneNumber;
   const { data: dashboardData, isLoading, refetch } = useDashboardSummary(userPhoneOrId);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('active');
   const [selectedDetailsTontine, setSelectedDetailsTontine] = useState<ExtendedTontineItem | null>(null);

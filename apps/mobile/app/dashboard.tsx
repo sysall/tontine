@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TontineLogo } from '../components/TontineLogo';
 import {
@@ -33,6 +33,15 @@ import {
 } from '../api/useTontine';
 
 type TxFilterType = 'all' | 'contribution' | 'payout';
+
+export const EVENT_OPTIONS = [
+  { id: 'opt-100k', name: 'Option 1', amountFcfa: 100000, installmentFcfa: 10000 },
+  { id: 'opt-150k', name: 'Option 2', amountFcfa: 150000, installmentFcfa: 15000 },
+  { id: 'opt-250k', name: 'Option 3', amountFcfa: 250000, installmentFcfa: 25000 },
+  { id: 'opt-500k', name: 'Option 4', amountFcfa: 500000, installmentFcfa: 50000 },
+  { id: 'opt-750k', name: 'Option 5', amountFcfa: 750000, installmentFcfa: 75000 },
+  { id: 'opt-1M',   name: 'Option 6', amountFcfa: 1000000, installmentFcfa: 100000 },
+];
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -59,6 +68,13 @@ export default function DashboardScreen() {
   const subscribeOfferMutation = useSubscribeOffer();
   const joinTontineMutation = useJoinTontine();
 
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+      refetchTx();
+    }, [refetch, refetchTx])
+  );
+
   const activeEventNatts: EventNattItem[] = eventsData?.events || [];
 
   // Modals state
@@ -68,8 +84,10 @@ export default function DashboardScreen() {
   // Selected Tier State for Subscription Modal
   const [selectedTier, setSelectedTier] = useState<OfficialTier | null>(null);
 
-  // Natt Événement Selection State (Dynamic Event ID)
+  // Natt Événement Selection State (Dynamic Event ID & Option)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventOption, setSelectedEventOption] = useState(EVENT_OPTIONS[0]);
+  const [eventStep, setEventStep] = useState<1 | 2>(1);
 
   const handleConfirmSubscription = () => {
     if (!selectedOfferModal || !selectedTier) {
@@ -119,10 +137,12 @@ export default function DashboardScreen() {
       pathname: '/natt-recap',
       params: {
         eventId: selectedEvt.eventId,
-        offerTitle: selectedEvt.title,
-        amountFcfa: selectedEvt.targetAmount.toString(),
-        installmentAmount: selectedEvt.installmentAmount.toString(),
-        frequency: selectedEvt.frequency || 'Mensuelle',
+        offerTitle: `${selectedEvt.title} (${selectedEventOption.name})`,
+        amountFcfa: selectedEventOption.amountFcfa.toString(),
+        installmentAmount: selectedEventOption.installmentFcfa.toString(),
+        frequency: 'Journalier',
+        maxMembers: '10',
+        eventDueDate: selectedEvt.eventDueDate,
         category: 'EVENT',
       },
     });
@@ -270,7 +290,10 @@ export default function DashboardScreen() {
 
             {/* 3. Natt Événement */}
             <TouchableOpacity
-              onPress={() => setIsJoinModalOpen(true)}
+              onPress={() => {
+                setEventStep(1);
+                setIsJoinModalOpen(true);
+              }}
               activeOpacity={0.75}
               style={{ width: '31.5%', alignItems: 'center', justifyContent: 'center' }}
             >
@@ -514,98 +537,211 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-      {/* MODAL 2: JOIN NATT ÉVÉNEMENT */}
+      {/* MODAL 2: JOIN NATT ÉVÉNEMENT (2 STEPS) */}
       <Modal visible={isJoinModalOpen} animationType="slide" transparent>
         <View className="flex-1 justify-end bg-black/50">
           <View className="bg-white rounded-t-[32px] p-6 shadow-2xl">
+            {/* Modal Header */}
             <View className="flex-row justify-between items-center mb-3 pb-2 border-b border-gray-100">
-              <Text className="text-xl font-black text-brand-dark uppercase">
-                Natt Événement
-              </Text>
+              {eventStep === 2 ? (
+                <TouchableOpacity
+                  onPress={() => setEventStep(1)}
+                  activeOpacity={0.7}
+                  className="flex-row items-center bg-gray-100 px-3 py-1.5 rounded-full"
+                >
+                  <Text className="text-xs font-bold text-[#173F73] mr-1">←</Text>
+                  <Text className="text-xs font-bold text-[#173F73]">Événements</Text>
+                </TouchableOpacity>
+              ) : (
+                <View>
+                  <Text className="text-xl font-black text-brand-dark uppercase">
+                    Natt Événement
+                  </Text>
+                  <Text className="text-[11px] font-bold text-gray-400">Étape 1 / 2 : Événement</Text>
+                </View>
+              )}
+
+              {eventStep === 2 && (
+                <View className="items-center">
+                  <Text className="text-base font-black text-brand-dark uppercase">
+                    Choix d'Option
+                  </Text>
+                  <Text className="text-[11px] font-bold text-[#19A66A]">Étape 2 / 2 : Options</Text>
+                </View>
+              )}
+
               <TouchableOpacity onPress={() => setIsJoinModalOpen(false)}>
                 <Text className="text-xl font-bold text-gray-400">✕</Text>
               </TouchableOpacity>
             </View>
 
-            <Text className="text-xs font-semibold text-gray-600 mb-4">
-              Choisissez l'événement créé par l'administration pour lequel vous souhaitez cotiser :
-            </Text>
-
-            {/* Event Options */}
-            <View className="mb-5">
-              {isEventsLoading ? (
-                <ActivityIndicator size="small" color="#19A66A" className="my-4" />
-              ) : activeEventNatts.length === 0 ? (
-                <View className="bg-gray-50 rounded-2xl p-6 border border-gray-200/80 items-center justify-center my-2">
-                  <Text className="text-2xl mb-2">📅</Text>
-                  <Text className="text-sm font-bold text-gray-700 text-center mb-1">
-                    Aucun Natt Événement disponible
+            {/* Modal Body */}
+            {eventStep === 1 ? (
+              /* STEP 1: Select Event Campaign */
+              <>
+                <ScrollView className="max-h-96 mb-4" showsVerticalScrollIndicator={false}>
+                  <Text className="text-xs font-extrabold text-[#173F73] uppercase tracking-wider mb-2">
+                    Sélectionnez votre Natt Événement :
                   </Text>
-                  <Text className="text-xs text-gray-500 text-center">
-                    Les campagnes événementielles créées par l'administrateur s'afficheront ici.
-                  </Text>
-                </View>
-              ) : (
-                activeEventNatts.map((evt) => {
-                  const isSelected = (selectedEventId || activeEventNatts[0]?.eventId) === evt.eventId;
-                  return (
-                    <TouchableOpacity
-                      key={evt.eventId}
-                      onPress={() => setSelectedEventId(evt.eventId)}
-                      activeOpacity={0.8}
-                      className={`p-4 rounded-2xl border flex-row items-center justify-between mb-3 ${isSelected
-                        ? 'bg-blue-50 border-brand-primary shadow-sm'
-                        : 'bg-gray-50 border-gray-200'
-                        }`}
-                    >
-                      <View className="flex-row items-center space-x-3 flex-1 pr-2">
-                        <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center">
-                          <Text className="text-lg">🎉</Text>
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-sm font-extrabold text-brand-dark" numberOfLines={1}>
-                            {evt.title}
-                          </Text>
-                          <Text className="text-xs text-brand-primary font-bold">
-                            Cible: {evt.targetAmount.toLocaleString('fr-FR')} FCFA ({evt.installmentAmount.toLocaleString('fr-FR')} FCFA / {evt.frequency})
-                          </Text>
-                          {evt.description ? (
-                            <Text className="text-[11px] text-gray-500 mt-0.5" numberOfLines={1}>
-                              {evt.description}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </View>
-                      <View className={`w-5 h-5 rounded-full border items-center justify-center ${isSelected ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
-                        }`}>
-                        {isSelected && <Text className="text-white text-xs font-bold">✓</Text>}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </View>
 
-            <TouchableOpacity
-              onPress={handleJoinSubmit}
-              disabled={joinTontineMutation.isPending || activeEventNatts.length === 0}
-              activeOpacity={0.85}
-              className={`w-full py-4 rounded-2xl items-center shadow-md ${activeEventNatts.length === 0
-                ? 'bg-gray-300'
-                : 'bg-[#173F73] active:bg-[#1A4A82] border border-[#19A66A]/30'
-                }`}
-            >
-              {joinTontineMutation.isPending ? (
-                <ActivityIndicator color="#19A66A" />
-              ) : (
-                <Text
-                  className={`text-base font-black uppercase tracking-wider ${activeEventNatts.length === 0 ? 'text-gray-500' : 'text-[#19A66A]'
+                  <View className="mb-2">
+                    {isEventsLoading ? (
+                      <ActivityIndicator size="small" color="#19A66A" className="my-4" />
+                    ) : activeEventNatts.length === 0 ? (
+                      <View className="bg-gray-50 rounded-2xl p-6 border border-gray-200/80 items-center justify-center my-2">
+                        <Text className="text-2xl mb-2">📅</Text>
+                        <Text className="text-sm font-bold text-gray-700 text-center mb-1">
+                          Aucun Natt Événement disponible
+                        </Text>
+                        <Text className="text-xs text-gray-500 text-center">
+                          Les campagnes événementielles créées par l'administrateur s'afficheront ici.
+                        </Text>
+                      </View>
+                    ) : (
+                      activeEventNatts.map((evt) => {
+                        const isSelected = (selectedEventId || activeEventNatts[0]?.eventId) === evt.eventId;
+                        return (
+                          <TouchableOpacity
+                            key={evt.eventId}
+                            onPress={() => setSelectedEventId(evt.eventId)}
+                            activeOpacity={0.8}
+                            className={`p-3.5 rounded-2xl border flex-row items-center justify-between mb-2.5 ${isSelected
+                              ? 'bg-blue-50 border-brand-primary shadow-sm'
+                              : 'bg-gray-50 border-gray-200'
+                              }`}
+                          >
+                            <View className="flex-row items-center space-x-3 flex-1 pr-2">
+                              <View className="w-9 h-9 rounded-full bg-amber-100 items-center justify-center">
+                                <Text className="text-base">🎉</Text>
+                              </View>
+                              <View className="flex-1">
+                                <Text className="text-sm font-extrabold text-brand-dark" numberOfLines={1}>
+                                  {evt.title}
+                                </Text>
+                                <Text className="text-xs text-gray-500">
+                                  Échéance : {evt.eventDueDate || evt.subscriptionDeadline || '10 tours'}
+                                </Text>
+                              </View>
+                            </View>
+                            <View className={`w-5 h-5 rounded-full border items-center justify-center ${isSelected ? 'bg-brand-primary border-brand-primary' : 'border-gray-300'
+                              }`}>
+                              {isSelected && <Text className="text-white text-xs font-bold">✓</Text>}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })
+                    )}
+                  </View>
+                </ScrollView>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!selectedEventId && activeEventNatts.length > 0) {
+                      setSelectedEventId(activeEventNatts[0].eventId);
+                    }
+                    setEventStep(2);
+                  }}
+                  disabled={activeEventNatts.length === 0}
+                  activeOpacity={0.85}
+                  className={`w-full py-4 rounded-2xl items-center shadow-md ${activeEventNatts.length === 0
+                    ? 'bg-gray-300'
+                    : 'bg-[#173F73] active:bg-[#1A4A82] border border-[#19A66A]/30'
                     }`}
                 >
-                  CONFIRMER MA SOUSCRIPTION
-                </Text>
-              )}
-            </TouchableOpacity>
+                  <Text
+                    className={`text-base font-black uppercase tracking-wider ${activeEventNatts.length === 0 ? 'text-gray-500' : 'text-[#19A66A]'
+                      }`}
+                  >
+                    VOIR LES OPTIONS ➔
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* STEP 2: Select Option Tiers & Confirm */
+              <>
+                <ScrollView className="max-h-96 mb-4" showsVerticalScrollIndicator={false}>
+                  {/* Selected Event Summary Banner */}
+                  {(() => {
+                    const selectedEvtObj = activeEventNatts.find(
+                      (e) => e.eventId === (selectedEventId || activeEventNatts[0]?.eventId)
+                    );
+                    return selectedEvtObj ? (
+                      <View className="bg-blue-50 border border-brand-primary/30 p-3 rounded-2xl mb-3 flex-row items-center space-x-3">
+                        <View className="w-8 h-8 rounded-full bg-amber-100 items-center justify-center">
+                          <Text className="text-sm">🎉</Text>
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider">
+                            Événement sélectionné
+                          </Text>
+                          <Text className="text-sm font-extrabold text-brand-dark" numberOfLines={1}>
+                            {selectedEvtObj.title}
+                          </Text>
+                          <Text className="text-[11px] text-gray-500">
+                            Échéance : {selectedEvtObj.eventDueDate || selectedEvtObj.subscriptionDeadline || '10 tours'}
+                          </Text>
+                        </View>
+                      </View>
+                    ) : null;
+                  })()}
+
+                  <Text className="text-xs font-extrabold text-[#173F73] uppercase tracking-wider mb-2">
+                    Choisissez votre Option (10 tours journaliers) :
+                  </Text>
+
+                  <View className="space-y-2 mb-2">
+                    {EVENT_OPTIONS.map((opt) => {
+                      const isOptSelected = selectedEventOption.id === opt.id;
+                      return (
+                        <TouchableOpacity
+                          key={opt.id}
+                          onPress={() => setSelectedEventOption(opt)}
+                          activeOpacity={0.8}
+                          className={`p-3.5 rounded-2xl border flex-row items-center justify-between mb-2 ${isOptSelected
+                            ? 'bg-emerald-50 border-[#19A66A] shadow-sm'
+                            : 'bg-gray-50 border-gray-200'
+                            }`}
+                        >
+                          <View>
+                            <Text className="text-sm font-extrabold text-brand-dark">
+                              {opt.name} — {opt.amountFcfa.toLocaleString('fr-FR')} FCFA
+                            </Text>
+                            <Text className="text-xs text-gray-500 mt-0.5">
+                              10 versements de {opt.installmentFcfa.toLocaleString('fr-FR')} FCFA / jour
+                            </Text>
+                          </View>
+                          <View className={`w-5 h-5 rounded-full border items-center justify-center ${isOptSelected ? 'bg-[#19A66A] border-[#19A66A]' : 'border-gray-300'
+                            }`}>
+                            {isOptSelected && <Text className="text-white text-xs font-bold">✓</Text>}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+
+                <TouchableOpacity
+                  onPress={handleJoinSubmit}
+                  disabled={joinTontineMutation.isPending || activeEventNatts.length === 0}
+                  activeOpacity={0.85}
+                  className={`w-full py-4 rounded-2xl items-center shadow-md ${activeEventNatts.length === 0
+                    ? 'bg-gray-300'
+                    : 'bg-[#173F73] active:bg-[#1A4A82] border border-[#19A66A]/30'
+                    }`}
+                >
+                  {joinTontineMutation.isPending ? (
+                    <ActivityIndicator color="#19A66A" />
+                  ) : (
+                    <Text
+                      className={`text-base font-black uppercase tracking-wider ${activeEventNatts.length === 0 ? 'text-gray-500' : 'text-[#19A66A]'
+                        }`}
+                    >
+                      CONFIRMER MA SOUSCRIPTION
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>

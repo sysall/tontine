@@ -83,6 +83,7 @@ export interface EventNattItem {
   targetAmountFcfa: number;
   subscribersCount: number;
   emoji: string;
+  status?: 'ACTIVE' | 'INACTIVE';
   isDeletable?: boolean;
 }
 
@@ -217,7 +218,7 @@ export class AdminBackofficeService {
 
       // 2. Fetch UserNatts (Subscriptions) from Cloud Firestore (/user_natts)
       const nattsSnap = await this.firestoreService.userNatts().get();
-      const nattsMap = new Map<string, { title: string; clientName: string; clientPhone: string }>();
+      const nattsMap = new Map<string, { title: string; clientName: string; clientPhone: string; targetAmountFcfa?: number; contributedAmountFcfa?: number }>();
 
       if (!nattsSnap.empty) {
         this.subscriptions = nattsSnap.docs.map((doc) => {
@@ -239,6 +240,8 @@ export class AdminBackofficeService {
             title: categoryTitle,
             clientName: userMeta.fullName,
             clientPhone: userMeta.phone,
+            targetAmountFcfa,
+            contributedAmountFcfa,
           });
 
           return {
@@ -266,16 +269,26 @@ export class AdminBackofficeService {
       // 3. Fetch Event Natts from Cloud Firestore (/event_natts)
       const eventsSnap = await this.firestoreService.eventNatts().get();
       if (!eventsSnap.empty) {
+        // Fetch all userNatts to compute exact real-time subscriber counts
+        const userNattsSnap = await this.firestoreService.userNatts().get();
+        const allUserNatts = userNattsSnap.empty ? [] : userNattsSnap.docs.map((uDoc) => uDoc.data());
+
         this.eventNattsList = eventsSnap.docs.map((doc) => {
           const d = doc.data();
+          const rawStatus = d.status || 'ACTIVE';
+          const status = (rawStatus === 'INACTIVE' || rawStatus === 'DELETED') ? 'INACTIVE' : 'ACTIVE';
+          const dynamicCount = allUserNatts.filter((un) => un.eventId === doc.id || un.catalogId === doc.id).length;
+          const subscribersCount = Math.max(d.subscribersCount || 0, dynamicCount);
+
           return {
             id: doc.id,
             title: d.title,
             description: d.description,
             eventDate: d.eventDueDate ? new Date(d.eventDueDate).toLocaleDateString('fr-FR') : 'Échéance à définir',
             targetAmountFcfa: d.targetAmount,
-            subscribersCount: d.subscribersCount || 0,
+            subscribersCount,
             emoji: '🎉',
+            status,
             isDeletable: true,
           };
         });
@@ -310,15 +323,32 @@ export class AdminBackofficeService {
           const nattTitle = tx.nattTitle || tx.description || nattMeta?.title || 'Cotisation Natt';
 
           if (tx.type === 'NATT_PAYOUT') {
+            const nattTargetAmt = tx.targetAmountFcfa || nattMeta?.targetAmountFcfa || tx.amount || 1;
+            const contributedAtPayout = tx.contributedAtPayout !== undefined
+              ? tx.contributedAtPayout
+              : (tx.contributedAmountFcfa !== undefined
+                ? tx.contributedAmountFcfa
+                : (nattMeta?.contributedAmountFcfa !== undefined
+                  ? nattMeta.contributedAmountFcfa
+                  : Math.round((tx.amount || 0) * 0.7)));
+
+            const rawProgress = tx.progressPercentAtPayout !== undefined
+              ? tx.progressPercentAtPayout
+              : (tx.progressPercent !== undefined
+                ? tx.progressPercent
+                : Math.min(100, (contributedAtPayout / nattTargetAmt) * 100));
+
+            const progressAtPayoutPercent = parseFloat(rawProgress.toFixed(1));
+
             payouts.push({
               id: doc.id,
               subscriptionId: tx.userNattId || '',
               clientName: userMeta.fullName,
               clientPhone: userMeta.phone,
               nattTitle,
-              targetAmountFcfa: tx.amount || 0,
-              contributedAtPayoutFcfa: Math.round((tx.amount || 0) * 0.7),
-              progressAtPayoutPercent: 70,
+              targetAmountFcfa: nattTargetAmt,
+              contributedAtPayoutFcfa: contributedAtPayout,
+              progressAtPayoutPercent,
               payoutAmountFcfa: tx.amount || 0,
               provider: (tx.gateway === 'ORANGE_MONEY' ? 'Orange Money' : tx.gateway === 'VIREMENT' ? 'Virement' : 'Wave') as any,
               reference: tx.gatewayReference || doc.id,
@@ -543,15 +573,26 @@ export class AdminBackofficeService {
     const txRef = `${provider === 'Wave' ? 'WV' : provider === 'Orange Money' ? 'OM' : 'VIR'}-PAYOUT-${Math.floor(100000 + Math.random() * 900000)}`;
 
     try {
-      // 1. Update subscription in Firestore
+      // 1. Fetch current subscription to check remaining balance
+      const userNattSnap = await this.firestoreService.userNatts().doc(subscriptionId).get();
+      const userNattData = userNattSnap.exists ? userNattSnap.data() : null;
+      const totalPaid = userNattData?.totalPaid ?? targetSub.contributedAmountFcfa ?? 0;
+      const targetAmount = userNattData?.targetAmount ?? targetSub.targetAmountFcfa ?? payoutAmount;
+      const remainingBalance = userNattData?.remainingBalance ?? Math.max(0, targetAmount - totalPaid);
+
+      // Status becomes COMPLETED ONLY when all installments are paid (remainingBalance <= 0)
+      const isCompleted = remainingBalance <= 0;
+      const updatedStatus = isCompleted ? 'COMPLETED' : 'ACTIVE';
+      const progressPercentAtPayout = Math.min(100, parseFloat(((totalPaid / targetAmount) * 100).toFixed(1)));
+
       await this.firestoreService.userNatts().doc(subscriptionId).set({
         payoutStatus: 'PAID',
-        status: 'COMPLETED',
+        status: updatedStatus,
         payoutTxRef: txRef,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
 
-      // 2. Add Transaction in Firestore
+      // 2. Add Transaction in Firestore with exact contribution metadata at payout moment
       const txId = `tx-payout-${Date.now()}`;
       await this.firestoreService.transactions().doc(txId).set({
         transactionId: txId,
@@ -562,6 +603,9 @@ export class AdminBackofficeService {
         nattTitle: targetSub.categoryTitle,
         type: 'NATT_PAYOUT',
         amount: payoutAmount,
+        targetAmountFcfa: targetAmount,
+        contributedAtPayout: totalPaid,
+        progressPercentAtPayout: progressPercentAtPayout,
         gateway: provider === 'Orange Money' ? 'ORANGE_MONEY' : provider === 'Virement' ? 'VIREMENT' : 'WAVE',
         gatewayReference: txRef,
         status: 'SUCCESS',
@@ -591,14 +635,19 @@ export class AdminBackofficeService {
    */
   async addEventNatt(newEvent: Omit<EventNattItem, 'id' | 'subscribersCount'>) {
     const eventId = `evt-${Date.now()}`;
+    const targetAmount = newEvent.targetAmountFcfa || 3000000;
+    const installmentAmount = Math.round(targetAmount / 10);
 
     try {
       await this.firestoreService.eventNatts().doc(eventId).set({
         eventId,
         title: newEvent.title,
         description: newEvent.description,
-        targetAmount: newEvent.targetAmountFcfa,
-        thresholdAmount: Math.round(newEvent.targetAmountFcfa * 0.7),
+        targetAmount,
+        thresholdAmount: Math.round(targetAmount * 0.7),
+        installmentAmount,
+        frequency: 'DAILY',
+        subscriptionDeadline: newEvent.eventDate,
         eventDueDate: newEvent.eventDate,
         subscribersCount: 0,
         status: 'ACTIVE',
@@ -613,17 +662,33 @@ export class AdminBackofficeService {
   }
 
   /**
-   * Action: Delete Event Natt in Firestore
+   * Action: Toggle or Deactivate Event Natt in Firestore
    */
-  async deleteEventNatt(eventId: string) {
+  async toggleEventNattStatus(eventId: string, targetStatus?: 'ACTIVE' | 'INACTIVE') {
     try {
-      await this.firestoreService.eventNatts().doc(eventId).delete();
-      this.logger.log(`Deleted Event Natt from Firestore: ${eventId}`);
+      const docRef = this.firestoreService.eventNatts().doc(eventId);
+      const snap = await docRef.get();
+      const currentStatus = snap.data()?.status || 'ACTIVE';
+      const newStatus = targetStatus || (currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+
+      await docRef.set({
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+
+      this.logger.log(`Updated Event Natt ${eventId} status to ${newStatus} in Firestore`);
     } catch (err: any) {
-      this.logger.error(`Failed to delete event natt from Firestore: ${err.message}`);
+      this.logger.error(`Failed to update event natt status in Firestore: ${err.message}`);
     }
 
     return this.getBackofficeData();
+  }
+
+  /**
+   * Action: Delete (Deactivate) Event Natt in Firestore
+   */
+  async deleteEventNatt(eventId: string) {
+    return this.toggleEventNattStatus(eventId, 'INACTIVE');
   }
 
   /**

@@ -80,18 +80,33 @@ export class TontineTransactionService {
 
   async getActiveEventNatts(): Promise<EventNatt[]> {
     try {
-      const snapshot = await this.firestoreService.eventNatts().where('status', '==', 'ACTIVE').get();
+      const snapshot = await this.firestoreService.eventNatts().get();
       if (!snapshot.empty) {
-        const events = snapshot.docs.map(doc => doc.data() as EventNatt);
+        const events = snapshot.docs
+          .map(doc => {
+            const d = doc.data() as EventNatt;
+            const targetAmount = d.targetAmount || 1000000;
+            const installmentAmount = d.installmentAmount || Math.round(targetAmount / 10);
+            return {
+              ...d,
+              eventId: doc.id,
+              targetAmount,
+              installmentAmount,
+              frequency: d.frequency || 'DAILY',
+              status: d.status || 'ACTIVE',
+            };
+          })
+          .filter(e => e.status !== 'INACTIVE' && e.status !== 'DELETED');
+
         for (const e of events) {
           this.eventNatts.set(e.eventId, e);
         }
         return events;
       }
-      return Array.from(this.eventNatts.values()).filter(e => e.status === 'ACTIVE');
+      return Array.from(this.eventNatts.values()).filter(e => e.status !== 'INACTIVE' && e.status !== 'DELETED');
     } catch (err: any) {
       this.logger.error(`Error fetching eventNatts from Firestore: ${err.message}`);
-      return Array.from(this.eventNatts.values()).filter(e => e.status === 'ACTIVE');
+      return Array.from(this.eventNatts.values()).filter(e => e.status !== 'INACTIVE' && e.status !== 'DELETED');
     }
   }
 
@@ -247,12 +262,23 @@ export class TontineTransactionService {
         throw new ForbiddenException(`La date limite d'adhésion pour cet événement est dépassée.`);
       }
 
-      targetAmount = event.targetAmount;
-      thresholdAmount = event.thresholdAmount;
-      installmentAmount = event.installmentAmount;
-      frequency = event.frequency;
-      title = event.title;
+      targetAmount = dto.targetAmount || event.targetAmount;
+      thresholdAmount = Math.round(targetAmount * 0.70);
+      installmentAmount = dto.initialPaymentAmount || Math.round(targetAmount / 10);
+      frequency = dto.frequency || event.frequency || 'DAILY';
+      title = dto.customTitle || event.title;
       eventDueDate = event.eventDueDate;
+
+      // Increment subscribersCount for this event in Firestore
+      try {
+        const eventRef = this.firestoreService.eventNatts().doc(dto.eventId);
+        const eventSnap = await eventRef.get();
+        const currentCount = eventSnap.exists ? (eventSnap.data()?.subscribersCount || 0) : 0;
+        await eventRef.set({ subscribersCount: currentCount + 1, updatedAt: now.toISOString() }, { merge: true });
+        this.logger.log(`Incremented subscribersCount for Event Natt ${dto.eventId} to ${currentCount + 1}`);
+      } catch (evtErr: any) {
+        this.logger.warn(`Failed to increment subscribersCount for Event Natt ${dto.eventId}: ${evtErr.message}`);
+      }
     } else {
       if (!dto.catalogId) {
         throw new BadRequestException('catalogId est requis pour un Natt permanent (natt_classique ou tekk_tegui).');
@@ -273,13 +299,17 @@ export class TontineTransactionService {
         throw new BadRequestException(`La fréquence ${frequency} n'est pas autorisée pour ce Natt.`);
       }
 
-      // Calculate default installment amount (e.g. 10 installments)
-      installmentAmount = Math.round(targetAmount / 10);
+      // Calculate default installment amount & total tours based on catalog:
+      // - natt_classique: 4 tours (mensuels) -> targetAmount / 4 (ex: 250 000 / 4 = 62 500 FCFA)
+      // - tekk_tegui: 10 tours (journaliers) -> targetAmount / 10
+      const defaultTours = dto.catalogId === 'natt_classique' ? 4 : 10;
+      installmentAmount = dto.initialPaymentAmount || Math.round(targetAmount / defaultTours);
       thresholdAmount = Math.round(targetAmount * 0.70);
       title = dto.customTitle || catalog.name;
     }
 
-    const totalInstallments = Math.ceil(targetAmount / installmentAmount);
+    const defaultTours = dto.category === 'EVENT' ? 10 : (dto.catalogId === 'natt_classique' ? 4 : 10);
+    const totalInstallments = defaultTours;
     const initialPaid = dto.initialPaymentAmount || 0;
     const paidCount = initialPaid > 0 ? 1 : 0;
     const remainingBalance = Math.max(0, targetAmount - initialPaid);
@@ -293,6 +323,7 @@ export class TontineTransactionService {
     const userNatt: UserNatt = {
       userNattId,
       userId: dto.userId,
+      userPhone: dto.userPhone || dto.userId,
       category: dto.category,
       catalogId: dto.catalogId || null as any,
       eventId: dto.eventId || null as any,
@@ -317,9 +348,12 @@ export class TontineTransactionService {
     this.userNatts.set(userNattId, userNatt);
     this.payments.set(userNattId, []);
 
-    this.firestoreService.userNatts().doc(userNattId).set(userNatt).catch((err) => {
+    // Await Firestore write so subscription is guaranteed to be persisted before API response
+    try {
+      await this.firestoreService.userNatts().doc(userNattId).set(userNatt);
+    } catch (err: any) {
       this.logger.error(`Failed to save userNatt ${userNattId} to Firestore: ${err.message}`);
-    });
+    }
 
     if (initialPaid > 0) {
       const paymentId = `pay-${Date.now()}`;
@@ -611,31 +645,54 @@ export class TontineTransactionService {
     tontines: any[];
   }> {
     try {
-      let userNattsList: UserNatt[] = [];
+      // Merge both in-memory userNatts Map and Firestore documents (deduplicated by userNattId)
+      const mergedMap = new Map<string, UserNatt>();
 
-      if (userId) {
-        let snapshot = await this.firestoreService.userNatts().where('userId', '==', userId).get();
-        if (snapshot.empty) {
-          snapshot = await this.firestoreService.userNatts().where('userPhone', '==', userId).get();
-        }
-        if (!snapshot.empty) {
-          userNattsList = snapshot.docs.map((doc: any) => doc.data() as UserNatt);
-        } else {
-          // Fallback to all userNatts in Firestore if query by specific userId returned 0 results
-          const allSnapshot = await this.firestoreService.userNatts().get();
-          if (!allSnapshot.empty) {
-            userNattsList = allSnapshot.docs.map((doc: any) => doc.data() as UserNatt);
+      // 1. Put in-memory items
+      for (const [id, item] of this.userNatts.entries()) {
+        mergedMap.set(id, item);
+      }
+
+      // 2. Put Firestore items
+      const snapshot = await this.firestoreService.userNatts().get();
+      if (!snapshot.empty) {
+        for (const doc of snapshot.docs) {
+          const data = doc.data() as UserNatt;
+          if (data && data.userNattId) {
+            mergedMap.set(data.userNattId, data);
           }
-        }
-      } else {
-        const snapshot = await this.firestoreService.userNatts().get();
-        if (!snapshot.empty) {
-          userNattsList = snapshot.docs.map((doc: any) => doc.data() as UserNatt);
         }
       }
 
-      if (userNattsList.length === 0) {
-        userNattsList = Array.from(this.userNatts.values());
+      let userNattsList: UserNatt[] = Array.from(mergedMap.values());
+
+      // Filter userNatts list for specific userId if provided
+      if (userId) {
+        const searchTokens = new Set<string>();
+        searchTokens.add(userId);
+        const clean = userId.replace(/\D/g, '');
+        if (clean) {
+          searchTokens.add(clean);
+          searchTokens.add(`+221${clean}`);
+          searchTokens.add(`mem-${clean}`);
+        }
+
+        const filteredList = userNattsList.filter((natt) => {
+          const uId = natt.userId || '';
+          const uPhone = natt.userPhone || '';
+          const uIdClean = uId.replace(/\D/g, '');
+          const uPhoneClean = uPhone.replace(/\D/g, '');
+
+          return (
+            searchTokens.has(uId) ||
+            searchTokens.has(uPhone) ||
+            (clean.length >= 6 && (uIdClean.includes(clean) || uPhoneClean.includes(clean)))
+          );
+        });
+
+        if (filteredList.length > 0) {
+          userNattsList = filteredList;
+        }
       }
 
       for (const natt of userNattsList) {
@@ -656,9 +713,14 @@ export class TontineTransactionService {
           activeTontinesCount++;
           expectedPayoutFcfa += natt.targetAmount || 0;
 
+          const isClassique = natt.catalogId === 'natt_classique' || (natt.title && natt.title.toLowerCase().includes('classique')) || (natt.frequency === 'MONTHLY' && natt.category === 'PERMANENT');
+          const computedInstallmentAmount = isClassique
+            ? Math.round((natt.targetAmount || 250000) / 4)
+            : (natt.installmentAmount || Math.round((natt.targetAmount || 100000) / 10));
+
           // Sum next installment across ALL active Natts with remaining balance
           if (natt.remainingBalance > 0) {
-            nextPaymentFcfa += natt.installmentAmount || 0;
+            nextPaymentFcfa += computedInstallmentAmount;
           }
 
           if (natt.nextDueDate) {
@@ -686,17 +748,24 @@ export class TontineTransactionService {
         ];
         const formattedNextTurnDate = `${dueDate.getDate()} ${months[dueDate.getMonth()]} ${dueDate.getFullYear()}`;
 
+        const isClassique = natt.catalogId === 'natt_classique' || (natt.title && natt.title.toLowerCase().includes('classique')) || (natt.frequency === 'MONTHLY' && natt.category === 'PERMANENT');
+        const totalTours = isClassique ? 4 : (natt.totalInstallments || 10);
+        const totalMembers = isClassique ? 4 : 10;
+        const computedInstallmentAmount = isClassique
+          ? Math.round((natt.targetAmount || 250000) / 4)
+          : (natt.installmentAmount || Math.round((natt.targetAmount || 100000) / 10));
+
         return {
           id: natt.userNattId,
           name: natt.title,
-          offerType: natt.category === 'EVENT' ? 'projet' : 'rotative',
-          category: natt.frequency === 'MONTHLY' ? 'Rotative Mensuelle' : 'Rotative Journalière',
-          amountPerCycle: natt.installmentAmount,
+          offerType: isClassique ? 'rotative' : 'projet',
+          category: isClassique ? 'Rotative Mensuelle' : 'Rotative Journalière',
+          amountPerCycle: computedInstallmentAmount,
           currentTurn: natt.paidInstallmentsCount || 1,
-          totalTours: natt.totalInstallments || 10,
-          totalMembers: 4,
+          totalTours,
+          totalMembers,
           myContributionFcfa: natt.totalPaid || 0,
-          myPayoutTurn: Math.ceil((natt.totalInstallments || 10) / 2),
+          myPayoutTurn: isClassique ? 3 : 9,
           nextTurnDate: formattedNextTurnDate,
           status: natt.status || 'ACTIVE',
         };

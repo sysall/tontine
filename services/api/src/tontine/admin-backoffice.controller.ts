@@ -45,10 +45,21 @@ export class AdminBackofficeController {
 
   @Delete('events/:eventId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Supprimer un Natt Événement' })
+  @ApiOperation({ summary: 'Supprimer / Désactiver un Natt Événement' })
   deleteEventNatt(@Param('eventId') eventId: string) {
-    this.logger.log(`Deleting Event Natt: ${eventId}`);
+    this.logger.log(`Deleting/Deactivating Event Natt: ${eventId}`);
     return this.backofficeService.deleteEventNatt(eventId);
+  }
+
+  @Post('events/:eventId/toggle')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Activer / Désactiver un Natt Événement sur Firestore' })
+  toggleEventNattStatus(
+    @Param('eventId') eventId: string,
+    @Body() dto?: { status?: 'ACTIVE' | 'INACTIVE' }
+  ) {
+    this.logger.log(`Toggling Event Natt status for ${eventId} to ${dto?.status || 'opposite'}`);
+    return this.backofficeService.toggleEventNattStatus(eventId, dto?.status);
   }
 
   @Post('kyc/:kycId/approve')

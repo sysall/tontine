@@ -144,6 +144,16 @@ export const App: React.FC = () => {
     }
   };
 
+  // Action: Toggle / Deactivate Event Natt Status
+  const handleToggleEventNattStatus = async (eventId: string, status?: 'ACTIVE' | 'INACTIVE') => {
+    try {
+      const updatedData = await adminApi.toggleEventNattStatus(eventId, status);
+      applyDataResponse(updatedData);
+    } catch (err) {
+      console.error('Failed to toggle event natt status via API:', err);
+    }
+  };
+
   // Action: Approve KYC
   const handleApproveKyc = async (kycId: string, notes?: string) => {
     try {
@@ -244,6 +254,7 @@ export const App: React.FC = () => {
                   eventNattsList={eventNattsList}
                   onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
                   onDeleteEventNatt={handleDeleteEventNatt}
+                  onToggleEventNattStatus={handleToggleEventNattStatus}
                 />
               )}
 

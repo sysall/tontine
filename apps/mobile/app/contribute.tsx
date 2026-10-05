@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,12 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { WalletIcon, SmartphoneIcon, ShieldCheckIcon, CalendarIcon } from '../components/Icons';
 import { useDashboardSummary, useProcessContribution } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 import { useAuthStore } from '../store/useAuthStore';
-import { db, auth } from '../config/firebase';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { auth } from '../config/firebase';
 
 export default function ContributeScreen() {
   const router = useRouter();
@@ -30,6 +29,12 @@ export default function ContributeScreen() {
   const userPhoneOrId = user?.uid || user?.id || user?.phoneNumber || user?.paymentPhoneNumber;
   const { data: dashboardData, isLoading, refetch } = useDashboardSummary(userPhoneOrId);
   const processContributionMutation = useProcessContribution();
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const activeTontines: ActiveTontineItem[] = dashboardData?.tontines || [];
 
@@ -47,54 +52,7 @@ export default function ContributeScreen() {
     const providerKey: 'WAVE' | 'ORANGE_MONEY' = selectedProvider === 'wave' ? 'WAVE' : 'ORANGE_MONEY';
 
     try {
-      // 1. Direct Firestore write for immediate client sync
-      if (db && selectedTontine.id) {
-        try {
-          const userNattRef = doc(db, 'user_natts', selectedTontine.id);
-          const userNattSnap = await getDoc(userNattRef);
-          const now = new Date();
-
-          if (userNattSnap.exists()) {
-            const currentData = userNattSnap.data();
-            const newTotalPaid = (currentData.totalPaid || 0) + selectedTontine.amountPerCycle;
-            const newRemaining = Math.max(0, (currentData.targetAmount || 0) - newTotalPaid);
-            const newPaidCount = (currentData.paidInstallmentsCount || 0) + 1;
-
-            const freq = currentData.frequency || 'MONTHLY';
-            const nextDueDateObj = new Date(now);
-            if (freq === 'DAILY') nextDueDateObj.setDate(nextDueDateObj.getDate() + 1);
-            else if (freq === 'WEEKLY') nextDueDateObj.setDate(nextDueDateObj.getDate() + 7);
-            else nextDueDateObj.setMonth(nextDueDateObj.getMonth() + 1);
-
-            await updateDoc(userNattRef, {
-              totalPaid: newTotalPaid,
-              remainingBalance: newRemaining,
-              paidInstallmentsCount: newPaidCount,
-              lastPaymentDate: now.toISOString(),
-              nextDueDate: nextDueDateObj.toISOString(),
-              updatedAt: now.toISOString(),
-            });
-
-            // Log contribution transaction in Firestore
-            const txId = `tx-contrib-${Date.now()}`;
-            await setDoc(doc(db, 'transactions', txId), {
-              transactionId: txId,
-              userNattId: selectedTontine.id,
-              userId: effectiveUserId,
-              type: 'NATT_CONTRIBUTION',
-              amount: selectedTontine.amountPerCycle,
-              gateway: providerKey,
-              gatewayReference: `${providerKey}-REF-${Date.now()}`,
-              status: 'SUCCESS',
-              createdAt: now.toISOString(),
-            }, { merge: true });
-          }
-        } catch (fErr) {
-          console.warn('Direct Firestore contribution write notice:', fErr);
-        }
-      }
-
-      // 2. Call NestJS backend API via processContributionMutation
+      // Traitement du versement 100% via l'API NestJS
       await processContributionMutation.mutateAsync({
         userNattId: selectedTontine.id,
         userId: effectiveUserId,

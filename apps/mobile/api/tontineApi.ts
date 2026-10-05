@@ -1,3 +1,6 @@
+import { db } from '../config/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+
 export interface TontineSummary {
   totalSavedFcfa: number;
   nextPaymentFcfa: number;
@@ -75,6 +78,7 @@ export interface DashboardResponse {
 
 export interface SubscribeOfferPayload {
   userId?: string;
+  userPhone?: string;
   category?: 'PERMANENT' | 'EVENT';
   catalogId?: 'natt_classique' | 'tekk_tegui';
   eventId?: string;
@@ -229,12 +233,55 @@ export const tontineApi = {
 
   getEventNatts: async (): Promise<{ success: boolean; events: EventNattItem[] }> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/natts/events`, {
-        headers: { Accept: 'application/json' },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Erreur chargement des événements');
-      return data;
+      let events: EventNattItem[] = [];
+
+      // 1. Direct Firestore fetch (/event_natts)
+      if (db) {
+        try {
+          const snapshot = await getDocs(collection(db, 'event_natts'));
+          if (!snapshot.empty) {
+            events = snapshot.docs
+              .map((docSnap) => {
+                const d = docSnap.data();
+                const targetAmount = d.targetAmount || 1000000;
+                const installmentAmount = d.installmentAmount || Math.round(targetAmount / 10);
+                return {
+                  eventId: docSnap.id,
+                  title: d.title || 'Natt Événement',
+                  description: d.description || '',
+                  targetAmount,
+                  thresholdAmount: d.thresholdAmount || Math.round(targetAmount * 0.7),
+                  installmentAmount,
+                  frequency: d.frequency || 'DAILY',
+                  subscriptionDeadline: d.subscriptionDeadline || d.eventDueDate || '',
+                  eventDueDate: d.eventDueDate || '',
+                  status: d.status || 'ACTIVE',
+                };
+              })
+              .filter((e) => e.status !== 'INACTIVE' && e.status !== 'DELETED');
+          }
+        } catch (fErr) {
+          console.warn('Direct Firestore fetch event_natts warning:', fErr);
+        }
+      }
+
+      // 2. Fetch from NestJS API if direct Firestore read returned 0 items
+      if (events.length === 0) {
+        const response = await fetch(`${API_BASE_URL}/natts/events`, {
+          headers: { Accept: 'application/json' },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.events && Array.isArray(data.events)) {
+            events = data.events;
+          }
+        }
+      }
+
+      return {
+        success: true,
+        events,
+      };
     } catch (error) {
       console.warn('Event Natts fetch error:', error);
       return {

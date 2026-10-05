@@ -9,7 +9,7 @@ import {
   OverdueContribution 
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
 
 export interface BackofficeDataResponse {
   success: boolean;
@@ -71,7 +71,7 @@ export const adminApi = {
   },
 
   /**
-   * Delete Event Natt
+   * Delete / Deactivate Event Natt
    */
   async deleteEventNatt(eventId: string): Promise<BackofficeDataResponse> {
     const res = await fetch(`${API_BASE_URL}/api/v1/admin/backoffice/events/${eventId}`, {
@@ -79,6 +79,21 @@ export const adminApi = {
     });
     if (!res.ok) {
       throw new Error(`Failed to delete event natt: HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  /**
+   * Toggle Event Natt Status (ACTIVE <-> INACTIVE)
+   */
+  async toggleEventNattStatus(eventId: string, status?: 'ACTIVE' | 'INACTIVE'): Promise<BackofficeDataResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/admin/backoffice/events/${eventId}/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to toggle event natt status: HTTP ${res.status}`);
     }
     return res.json();
   },

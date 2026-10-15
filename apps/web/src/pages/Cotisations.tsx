@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { CotisationTransaction, OverdueContribution } from '../types';
-import { ArrowDownRight, Search, Smartphone, AlertTriangle, Send, Bell, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowDownRight, Search, Smartphone, AlertTriangle, Bell, Clock } from 'lucide-react';
 
 interface CotisationsProps {
   cotisations: CotisationTransaction[];
   overdueContributions: OverdueContribution[];
-  onSendReminder: (overdueId: string) => void;
 }
 
 export const Cotisations: React.FC<CotisationsProps> = ({
   cotisations,
   overdueContributions,
-  onSendReminder,
 }) => {
   const [activeTab, setActiveTab] = useState<'deposits' | 'overdue'>('deposits');
   const [searchTerm, setSearchTerm] = useState('');
@@ -196,14 +194,12 @@ export const Cotisations: React.FC<CotisationsProps> = ({
                   <th>Montant En Retard</th>
                   <th>Date d'Échéance</th>
                   <th>Retard Cumulé</th>
-                  <th>Statut Relance</th>
-                  <th>Action Admin</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOverdue.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                       Aucun retard de cotisation enregistré.
                     </td>
                   </tr>
@@ -230,31 +226,6 @@ export const Cotisations: React.FC<CotisationsProps> = ({
                         <span className="badge" style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}>
                           🔴 Retard {ovd.daysOverdue}j
                         </span>
-                      </td>
-                      <td>
-                        {ovd.status === 'REMINDED' ? (
-                          <div style={{ fontSize: '0.75rem' }}>
-                            <span className="badge badge-emerald">
-                              <CheckCircle2 size={12} />
-                              <span>Relancé</span>
-                            </span>
-                            <div style={{ color: 'var(--text-dim)', marginTop: '2px', fontSize: '0.7rem' }}>{ovd.lastRemindedAt}</div>
-                          </div>
-                        ) : (
-                          <span className="badge badge-yellow">
-                            Non relancé
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <button 
-                          className="btn btn-gold btn-sm"
-                          onClick={() => onSendReminder(ovd.id)}
-                          disabled={ovd.status === 'REMINDED'}
-                        >
-                          <Send size={14} />
-                          <span>{ovd.status === 'REMINDED' ? 'Relance Envoyée' : 'Envoyer Relance SMS'}</span>
-                        </button>
                       </td>
                     </tr>
                   ))

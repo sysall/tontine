@@ -8,14 +8,23 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Admin = Firebase Auth account with an active document at /admins/{uid}
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active != false;
     }
 
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // 0. Backoffice Admins (/admins/{uid})
+    // Created manually in the Firebase console / via Admin SDK only.
+    match /admins/{adminId} {
+      allow read: if isOwner(adminId);
+      allow write: if false;
+    }
     // 1. Permanent Catalogs (/natt_catalogs/{catalogId})
     match /natt_catalogs/{catalogId} {
       allow read: if isAuthenticated();

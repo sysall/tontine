@@ -9,36 +9,30 @@ import {
   HttpCode, 
   HttpStatus, 
   Logger, 
-  Headers, 
-  UnauthorizedException 
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { TontineTransactionService } from './tontine-transaction.service';
 import { CreateEventNattDto } from './dtos/create-event-natt.dto';
 import { UpdateEventNattDto } from './dtos/update-event-natt.dto';
+import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 
+/**
+ * All routes require a valid Firebase ID token belonging to an active
+ * Firestore `admins/{uid}` document (see AdminAuthGuard).
+ */
 @ApiTags('Admin - Gestion des Natts Événements')
+@ApiBearerAuth()
+@UseGuards(AdminAuthGuard)
 @Controller('api/v1/admin/events')
 export class AdminEventsController {
   private readonly logger = new Logger(AdminEventsController.name);
 
   constructor(private readonly tontineService: TontineTransactionService) {}
 
-  /**
-   * Helper function to verify admin role
-   */
-  private checkAdminRole(roleHeader?: string) {
-    if (roleHeader !== 'admin') {
-      // In production, Firebase Admin Auth Guard verifies request.auth.token.role == 'admin'
-      this.logger.warn(`Access denied to admin endpoint. Role header provided: ${roleHeader}`);
-    }
-  }
-
   @Get()
   @ApiOperation({ summary: 'Liste complète des Natts Événements (Admin)' })
-  @ApiHeader({ name: 'x-user-role', description: 'Rôle utilisateur (ex: admin)', required: false })
-  async getAllEvents(@Headers('x-user-role') role?: string) {
-    this.checkAdminRole(role);
+  async getAllEvents() {
     return {
       success: true,
       events: await this.tontineService.getAllEventNattsForAdmin(),
@@ -58,13 +52,8 @@ export class AdminEventsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'A. Créer une nouvelle campagne Natt Événement' })
-  @ApiHeader({ name: 'x-user-role', description: 'Rôle admin requis', required: true })
   @ApiResponse({ status: 201, description: 'Natt Événement créé avec succès.' })
-  async createEvent(
-    @Body() dto: CreateEventNattDto,
-    @Headers('x-user-role') role?: string
-  ) {
-    this.checkAdminRole(role);
+  async createEvent(@Body() dto: CreateEventNattDto) {
     const event = await this.tontineService.createEventNatt(dto);
     return {
       success: true,
@@ -77,13 +66,10 @@ export class AdminEventsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'A. Modifier un Natt Événement ouvert' })
   @ApiParam({ name: 'eventId', description: 'ID de l\'événement à modifier' })
-  @ApiHeader({ name: 'x-user-role', description: 'Rôle admin requis', required: true })
   async updateEvent(
     @Param('eventId') eventId: string,
     @Body() dto: UpdateEventNattDto,
-    @Headers('x-user-role') role?: string
   ) {
-    this.checkAdminRole(role);
     const updated = await this.tontineService.updateEventNatt(eventId, dto);
     return {
       success: true,
@@ -96,12 +82,7 @@ export class AdminEventsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'A. Supprimer / Archiver un Natt Événement' })
   @ApiParam({ name: 'eventId', description: 'ID de l\'événement à supprimer' })
-  @ApiHeader({ name: 'x-user-role', description: 'Rôle admin requis', required: true })
-  async deleteEvent(
-    @Param('eventId') eventId: string,
-    @Headers('x-user-role') role?: string
-  ) {
-    this.checkAdminRole(role);
+  async deleteEvent(@Param('eventId') eventId: string) {
     const result = await this.tontineService.deleteEventNatt(eventId);
     return result;
   }

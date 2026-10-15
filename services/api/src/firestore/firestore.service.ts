@@ -64,6 +64,11 @@ export class FirestoreService implements OnModuleInit {
     return this.firestoreDb.collection('users');
   }
 
+  /** Backoffice administrators, keyed by Firebase Auth UID */
+  admins() {
+    return this.firestoreDb.collection('admins');
+  }
+
   eventNatts() {
     return this.firestoreDb.collection('event_natts');
   }

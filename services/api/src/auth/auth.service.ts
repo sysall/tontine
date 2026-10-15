@@ -35,7 +35,13 @@ export class AuthService {
       let phoneNumber: string | null = null;
       let email: string | null = null;
 
+      const allowTestTokens =
+        process.env.ALLOW_TEST_ID_TOKENS === 'true' && process.env.NODE_ENV !== 'production';
+
       if (idToken.startsWith('firebase_test_id_token_')) {
+        if (!allowTestTokens) {
+          throw new UnauthorizedException('Jetons de test désactivés');
+        }
         const tokenValue = idToken.replace('firebase_test_id_token_', '');
         const cleanDigits = tokenValue.replace(/[^\d]/g, '');
         if (cleanDigits) {
@@ -131,14 +137,15 @@ export class AuthService {
         };
       }
 
-      // 3. Otherwise, create new user document
-      const role: UserRole = requestedRole || (email && !phoneNumber ? 'ADMIN' : 'MEMBER');
+      // 3. Otherwise, create new user document.
+      // Security: role is never taken from the client. Backoffice admins are
+      // managed exclusively in Firestore `admins/{uid}` (see AdminAuthGuard).
+      void requestedRole;
+      const role: UserRole = 'MEMBER';
 
       let resolvedName = fullName?.trim();
       if (!resolvedName) {
-        if (role === 'ADMIN') {
-          resolvedName = 'Administrateur';
-        } else if (phoneNumber) {
+        if (phoneNumber) {
           const cleanLocal = phoneNumber.replace(/[^\d]/g, '').slice(-9);
           if (cleanLocal.length === 9) {
             resolvedName = `Membre (+221 ${cleanLocal.slice(0, 2)} ${cleanLocal.slice(2, 5)} ${cleanLocal.slice(5, 7)} ${cleanLocal.slice(7)})`;

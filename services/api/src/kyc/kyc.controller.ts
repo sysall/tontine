@@ -1,6 +1,7 @@
-import { Controller, Post, Get, Body, Param, Query, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, Param, Query, Logger, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { KycService, UploadKycDto } from './kyc.service';
+import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 
 @ApiTags('KYC & Pièces d\'Identité')
 @Controller('api/v1/kyc')
@@ -24,18 +25,24 @@ export class KycController {
   }
 
   @Get('list')
+  @ApiBearerAuth()
+  @UseGuards(AdminAuthGuard)
   @ApiOperation({ summary: 'Liste des dossiers KYC pour le Backoffice Admin' })
   async getAllRecords() {
     return this.kycService.getAllKycRecords();
   }
 
   @Post(':kycId/approve')
+  @ApiBearerAuth()
+  @UseGuards(AdminAuthGuard)
   @ApiOperation({ summary: 'Validation manuelle d\'un dossier KYC par l\'Administrateur' })
   async approveKyc(@Param('kycId') kycId: string, @Body() body?: { notes?: string }) {
     return this.kycService.approveKyc(kycId, body?.notes);
   }
 
   @Post(':kycId/reject')
+  @ApiBearerAuth()
+  @UseGuards(AdminAuthGuard)
   @ApiOperation({ summary: 'Rejet d\'un dossier KYC avec justification' })
   async rejectKyc(@Param('kycId') kycId: string, @Body() body: { notes: string }) {
     return this.kycService.rejectKyc(kycId, body.notes);

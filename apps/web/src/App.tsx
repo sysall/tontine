@@ -24,12 +24,14 @@ import {
   OverdueContribution 
 } from './types';
 
-import { adminApi, BackofficeDataResponse } from './api/adminApi';
+import { adminApi, AdminProfile, BackofficeDataResponse } from './api/adminApi';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './config/firebase';
 
 export const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('te_admin_auth') === 'true';
-  });
+  const [currentAdmin, setCurrentAdmin] = useState<AdminProfile | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
+  const isAuthenticated = currentAdmin !== null;
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -92,16 +94,44 @@ export const App: React.FC = () => {
     }
   }, [isAuthenticated]);
 
+  // Restore Firebase session on reload and re-verify admin access
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setCurrentAdmin(null);
+        setIsAuthChecking(false);
+        return;
+      }
+      try {
+        setCurrentAdmin(await adminApi.getMe());
+      } catch (err) {
+        console.warn('Admin access check failed:', err);
+        await signOut(auth);
+        setCurrentAdmin(null);
+      } finally {
+        setIsAuthChecking(false);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
   // Auth Handlers
-  const handleLoginSuccess = () => {
-    localStorage.setItem('te_admin_auth', 'true');
-    setIsAuthenticated(true);
+  const handleLoginSuccess = (admin: AdminProfile) => {
+    setCurrentAdmin(admin);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('te_admin_auth');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await signOut(auth);
+    setCurrentAdmin(null);
   };
+
+  if (isAuthChecking) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#173F73', fontWeight: 'bold' }}>
+        Vérification de la session administrateur...
+      </div>
+    );
+  }
 
   // If not authenticated, render Login Page
   if (!isAuthenticated) {
@@ -175,16 +205,6 @@ export const App: React.FC = () => {
       console.error('Failed to reject KYC via API:', err);
     } finally {
       setSelectedKycRecord(null);
-    }
-  };
-
-  // Action: Send Overdue Reminder
-  const handleSendReminder = async (overdueId: string) => {
-    try {
-      const updatedData = await adminApi.sendReminder(overdueId);
-      applyDataResponse(updatedData);
-    } catch (err) {
-      console.error('Failed to send reminder via API:', err);
     }
   };
 
@@ -262,7 +282,6 @@ export const App: React.FC = () => {
                 <Cotisations 
                   cotisations={cotisations}
                   overdueContributions={overdueContributions}
-                  onSendReminder={handleSendReminder}
                 />
               )}
             </>

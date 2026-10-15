@@ -7,17 +7,28 @@ import {
   Param, 
   HttpCode, 
   HttpStatus, 
-  Logger 
+  Logger,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminBackofficeService, EventNattItem } from './admin-backoffice.service';
+import { AdminAuthGuard, AdminProfile } from '../auth/guards/admin-auth.guard';
 
 @ApiTags('Admin Backoffice')
+@ApiBearerAuth()
+@UseGuards(AdminAuthGuard)
 @Controller('api/v1/admin/backoffice')
 export class AdminBackofficeController {
   private readonly logger = new Logger(AdminBackofficeController.name);
 
   constructor(private readonly backofficeService: AdminBackofficeService) {}
+
+  @Get('me')
+  @ApiOperation({ summary: 'Profil de l’administrateur connecté (vérifie l’accès backoffice)' })
+  getMe(@Req() req: { admin: AdminProfile }) {
+    return { success: true, admin: req.admin };
+  }
 
   @Get('data')
   @ApiOperation({ summary: 'Récupérer l’ensemble des données du Backoffice Web (Trésorerie, Clients, Souscriptions, KYC, Cotisations, etc.)' })
@@ -82,13 +93,5 @@ export class AdminBackofficeController {
   ) {
     this.logger.log(`Rejecting KYC for ${kycId} - Reason: ${dto.notes}`);
     return this.backofficeService.rejectKyc(kycId, dto.notes);
-  }
-
-  @Post('overdue/:overdueId/remind')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Envoyer une relance pour une cotisation en retard' })
-  sendReminder(@Param('overdueId') overdueId: string) {
-    this.logger.log(`Sending reminder for overdue item ${overdueId}`);
-    return this.backofficeService.sendReminder(overdueId);
   }
 }

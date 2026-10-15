@@ -766,24 +766,4 @@ export class AdminBackofficeService {
 
     return this.getBackofficeData();
   }
-
-  /**
-   * Action: Send Overdue Reminder
-   */
-  async sendReminder(overdueId: string) {
-    const nowStr = `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-
-    this.overdueContributions = this.overdueContributions.map((o) => {
-      if (o.id === overdueId) {
-        return {
-          ...o,
-          status: 'REMINDED',
-          lastRemindedAt: nowStr,
-        };
-      }
-      return o;
-    });
-
-    return this.getBackofficeData();
-  }
 }

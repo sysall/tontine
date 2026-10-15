@@ -7,12 +7,14 @@ import {
   Query, 
   HttpCode, 
   HttpStatus, 
-  Logger 
+  Logger,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TontineTransactionService } from './tontine-transaction.service';
 import { SubscribeNattDto } from './dtos/subscribe-natt.dto';
 import { ProcessContributionDto } from './dtos/process-contribution.dto';
+import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 
 @ApiTags('Natts & Offres d\'Épargne')
 @Controller('api/v1/natts')
@@ -99,7 +101,9 @@ export class PaymentsTransactionController {
   }
 
   @Get('transactions')
-  @ApiOperation({ summary: 'Historique global des transactions financières (Cotisations & Versements)' })
+  @ApiBearerAuth()
+  @UseGuards(AdminAuthGuard)
+  @ApiOperation({ summary: 'Historique global des transactions financières (Cotisations & Versements) — Admin' })
   getTransactions() {
     return {
       success: true,
@@ -114,6 +118,8 @@ export class ProcessPayoutDto {
 }
 
 @ApiTags('Admin - Versements & Déblocages à 70%')
+@ApiBearerAuth()
+@UseGuards(AdminAuthGuard)
 @Controller('api/v1/admin/payouts')
 export class AdminPayoutsController {
   private readonly logger = new Logger(AdminPayoutsController.name);
@@ -162,6 +168,8 @@ export class AdminPayoutsController {
 }
 
 @ApiTags('Admin - Trésorerie Centralisée')
+@ApiBearerAuth()
+@UseGuards(AdminAuthGuard)
 @Controller('api/v1/admin/treasury')
 export class AdminTreasuryController {
   constructor(private readonly tontineService: TontineTransactionService) {}

@@ -1,15 +1,41 @@
 import React, { useState } from 'react';
-import { Zap, ShieldCheck, Lock, Mail, ArrowRight, Eye, EyeOff, KeyRound, CheckCircle2 } from 'lucide-react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Zap, ShieldCheck, Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { adminApi, AdminProfile } from '../api/adminApi';
 
 interface LoginProps {
-  onLoginSuccess: (adminName: string) => void;
+  onLoginSuccess: (admin: AdminProfile) => void;
 }
 
+const firebaseErrorMessage = (code?: string): string => {
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-email':
+      return 'Identifiant ou mot de passe incorrect.';
+    case 'auth/user-disabled':
+      return 'Ce compte administrateur a été désactivé.';
+    case 'auth/too-many-requests':
+      return 'Trop de tentatives. Réessayez dans quelques minutes.';
+    case 'auth/network-request-failed':
+      return 'Erreur réseau. Vérifiez votre connexion.';
+    default:
+      return '';
+  }
+};
+
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('admin@tontine-express.sn');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,35 +50,19 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         throw new Error('Veuillez renseigner votre identifiant et mot de passe.');
       }
 
-      // 1. Authenticate with Firebase Email & Password
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+
+      // Ensure the account is registered in Firestore `admins/{uid}`
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const idToken = await userCredential.user.getIdToken();
-
-        // Sync with NestJS Backend API
-        const response = await fetch('/api/v1/auth/firebase-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken, role: 'ADMIN' }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          onLoginSuccess(data.user?.fullName || userCredential.user.email || 'Administrateur');
-          return;
-        }
-      } catch (fbErr: any) {
-        console.warn('Firebase online auth error (using dev fallback mode):', fbErr.message);
-      }
-
-      // Dev mode fallback
-      if (email === 'admin@tontine-express.sn' || email.includes('admin')) {
-        onLoginSuccess('Admin System');
-      } else {
-        throw new Error('Identifiants administrateur incorrects ou accès refusé.');
+        const admin = await adminApi.getMe();
+        onLoginSuccess(admin);
+      } catch (accessErr) {
+        await signOut(auth);
+        throw accessErr;
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erreur lors de la connexion administrateur.');
+      setErrorMsg(firebaseErrorMessage(err?.code) || err?.message || 'Erreur lors de la connexion administrateur.');
     } finally {
       setIsLoading(false);
     }
@@ -171,10 +181,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           {/* Password Field */}
           <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label className="form-label">Mot de passe</label>
-              <span style={{ fontSize: '0.75rem', color: '#19A66A', cursor: 'pointer' }}>Mot de passe oublié ?</span>
-            </div>
+            <label className="form-label">Mot de passe</label>
             <div style={{ position: 'relative' }}>
               <Lock size={18} color="#5A6B80" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
@@ -196,13 +203,17 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          {/* Remember me & Demo Note */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', fontSize: '0.8rem' }}>
+          {/* Remember me */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.75rem', fontSize: '0.8rem' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#5A6B80' }}>
-              <input type="checkbox" defaultChecked style={{ accentColor: '#19A66A' }} />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ accentColor: '#19A66A' }}
+              />
               <span>Rester connecté</span>
             </label>
-            <span style={{ color: '#8A9AAA', fontSize: '0.75rem' }}>Démo: admin123</span>
           </div>
 
           {/* Submit Button */}

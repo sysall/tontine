@@ -116,9 +116,7 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
               <tr>
                 <th>Client & Contact</th>
                 <th>Type de Pièce</th>
-                <th>NIN (N° CNI) Extrait</th>
-                <th>Score Confiance OCR</th>
-                <th>Statut OCR & Résultat</th>
+                <th>Statut Dossier</th>
                 <th>Date Soumission</th>
                 <th>Action Admin</th>
               </tr>
@@ -126,13 +124,12 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
             <tbody>
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                     Aucun dossier KYC correspondant à vos critères.
                   </td>
                 </tr>
               ) : (
                 filteredRecords.map((record) => {
-                  const isLowConf = record.ocrConfidencePercent < 85;
                   return (
                     <tr key={record.id}>
                       <td>
@@ -140,23 +137,13 @@ export const Kyc: React.FC<KycProps> = ({ kycRecords, onOpenKycModal }) => {
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{record.clientPhone}</div>
                       </td>
                       <td>
-                        <span className="badge badge-gray">{record.documentType}</span>
-                      </td>
-                      <td>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#19A66A' }}>
-                          {record.extractedNin}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`badge ${isLowConf ? 'badge-yellow' : 'badge-emerald'}`}>
-                          {record.ocrConfidencePercent}% {isLowConf ? ' (Inconcluant)' : ' (Concluant)'}
-                        </span>
+                        <span className="badge badge-gray">{record.documentType || 'CNI CEDEAO'}</span>
                       </td>
                       <td>
                         {record.status === 'PENDING_MANUAL_CHECK' ? (
                           <span className="badge badge-yellow">
                             <AlertTriangle size={12} />
-                            <span>Double Check Requis</span>
+                            <span>En attente de vérification</span>
                           </span>
                         ) : record.status === 'VERIFIED' ? (
                           <span className="badge badge-emerald">

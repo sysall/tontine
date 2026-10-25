@@ -116,7 +116,12 @@ export default function NattRecapScreen() {
     setIsSimulatingPayment(true);
 
     try {
-      const effectiveUserId = user?.uid || auth?.currentUser?.uid || user?.phoneNumber || 'user_demo_1';
+      const effectiveUserId = user?.uid || auth?.currentUser?.uid || user?.phoneNumber;
+      if (!effectiveUserId) {
+        Alert.alert('Session Expirée', 'Veuillez vous reconnecter pour finaliser votre souscription.');
+        router.replace('/login');
+        return;
+      }
       const userNattId = `user-natt-${Date.now()}`;
       const now = new Date();
 

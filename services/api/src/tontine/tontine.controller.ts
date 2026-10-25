@@ -9,12 +9,16 @@ import {
   HttpStatus, 
   Logger,
   UseGuards,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TontineTransactionService } from './tontine-transaction.service';
 import { SubscribeNattDto } from './dtos/subscribe-natt.dto';
 import { ProcessContributionDto } from './dtos/process-contribution.dto';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
+import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
+import { AuthenticatedUser, belongsToUser } from '../auth/user-identity';
 
 @ApiTags('Natts & Offres d\'Épargne')
 @Controller('api/v1/natts')
@@ -44,9 +48,14 @@ export class NattsController {
 
   @Post('subscribe')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'B. Souscrire à un Natt (Permanent ou Événementiel)' })
   @ApiResponse({ status: 201, description: 'Souscription enregistrée avec succès.' })
-  async subscribeNatt(@Body() dto: SubscribeNattDto) {
+  async subscribeNatt(@Req() req: { user: AuthenticatedUser }, @Body() dto: SubscribeNattDto) {
+    dto.userId = req.user.docId || req.user.uid;
+    dto.userPhone = req.user.phoneNumber || dto.userPhone || dto.userId;
+
     const userNatt = await this.tontineService.subscribeClientToNatt(dto);
     return {
       success: true,
@@ -56,9 +65,11 @@ export class NattsController {
   }
 
   @Get('my-subscriptions')
-  @ApiOperation({ summary: 'Liste des souscriptions Natt d\'un utilisateur' })
-  getUserSubscriptions(@Query('userId') userId: string) {
-    const subscriptions = this.tontineService.getUserNattsByUserId(userId || 'user-default');
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Liste des souscriptions Natt de l’utilisateur connecté' })
+  async getUserSubscriptions(@Req() req: { user: AuthenticatedUser }) {
+    const subscriptions = await this.tontineService.getUserNattsForUser(req.user);
     return {
       success: true,
       subscriptions,
@@ -66,8 +77,14 @@ export class NattsController {
   }
 
   @Get('payments/:userNattId')
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Historique des versements d\'un Natt spécifique' })
-  getPayments(@Param('userNattId') userNattId: string) {
+  async getPayments(@Req() req: { user: AuthenticatedUser }, @Param('userNattId') userNattId: string) {
+    const userNatt = await this.tontineService.getUserNattById(userNattId);
+    if (!belongsToUser(userNatt, req.user) && req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Vous n’êtes pas autorisé à consulter les versements de cette souscription.');
+    }
     const payments = this.tontineService.getPaymentsByNattId(userNattId);
     return {
       success: true,
@@ -85,10 +102,18 @@ export class PaymentsTransactionController {
 
   @Post('process-contribution')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '3. Traitement transactionnel d\'une cotisation & Évaluation du seuil des 70%' })
   @ApiResponse({ status: 200, description: 'Cotisation traitée et seuil 70% évalué.' })
-  processContribution(@Body() dto: ProcessContributionDto) {
-    this.logger.log(`Processing contribution of ${dto.amount} FCFA for UserNatt ${dto.userNattId}`);
+  async processContribution(@Req() req: { user: AuthenticatedUser }, @Body() dto: ProcessContributionDto) {
+    const userNatt = await this.tontineService.getUserNattById(dto.userNattId);
+    if (!belongsToUser(userNatt, req.user) && req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Vous n’êtes pas autorisé à cotiser pour cette souscription.');
+    }
+
+    dto.userId = req.user.docId || req.user.uid;
+    this.logger.log(`Processing contribution of ${dto.amount} FCFA for UserNatt ${dto.userNattId} by user ${dto.userId}`);
     const result = this.tontineService.processContribution(dto);
 
     return {
@@ -190,14 +215,24 @@ export class TontinesDashboardController {
   constructor(private readonly tontineService: TontineTransactionService) {}
 
   @Get('dashboard-summary')
-  @ApiOperation({ summary: 'Résumé du tableau de bord utilisateur depuis Cloud Firestore' })
-  async getDashboardSummary(@Query('userId') userId?: string) {
-    return this.tontineService.getDashboardSummary(userId);
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Résumé du tableau de bord de l’utilisateur connecté depuis Cloud Firestore' })
+  async getDashboardSummary(
+    @Req() req: { user: AuthenticatedUser },
+    @Query('userId') userIdParam?: string,
+  ) {
+    return this.tontineService.getDashboardSummary(req.user || userIdParam);
   }
 
   @Get('transactions')
-  @ApiOperation({ summary: 'Historique des transactions depuis Cloud Firestore' })
-  async getTransactions(@Query('userId') userId?: string) {
-    return this.tontineService.getTransactionsFromFirestore(userId);
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Historique des transactions de l’utilisateur connecté depuis Cloud Firestore' })
+  async getTransactions(
+    @Req() req: { user: AuthenticatedUser },
+    @Query('userId') userIdParam?: string,
+  ) {
+    return this.tontineService.getTransactionsFromFirestore(req.user || userIdParam);
   }
 }

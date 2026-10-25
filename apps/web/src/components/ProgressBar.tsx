@@ -22,7 +22,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
             Cotisé: {currentPercent.toFixed(1)}%
           </span>
           <span style={{ color: isEligible ? '#34d399' : 'var(--text-muted)', fontSize: '0.7rem' }}>
-            Seuil Déblocage 100%: <strong>70%</strong>
+            Seuil Déblocage: <strong>70%</strong>
           </span>
         </div>
       )}

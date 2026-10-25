@@ -139,148 +139,39 @@ export const OFFICIAL_OFFERS: OfficialOffer[] = [
   },
 ];
 
+import { apiFetch } from './apiClient';
+
 export const tontineApi = {
   getDashboardSummary: async (userId?: string): Promise<DashboardResponse> => {
-    try {
-      const url = userId
-        ? `${API_BASE_URL}/tontines/dashboard-summary?userId=${encodeURIComponent(userId)}`
-        : `${API_BASE_URL}/tontines/dashboard-summary`;
-      const response = await fetch(url, {
-        headers: { Accept: 'application/json' },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Erreur chargement tableau de bord');
-      return data;
-    } catch (error) {
-      console.warn('Dashboard summary fetch error:', error);
-      return {
-        success: true,
-        summary: {
-          totalSavedFcfa: 0,
-          nextPaymentFcfa: 0,
-          nextPaymentDueDate: '',
-          expectedPayoutFcfa: 0,
-          myPayoutTurn: 1,
-          activeTontinesCount: 0,
-        },
-        tontines: [],
-      };
-    }
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    return apiFetch<DashboardResponse>(`/tontines/dashboard-summary${query}`);
   },
 
   getTransactions: async (userId?: string): Promise<{ success: boolean; transactions: TransactionItem[] }> => {
-    try {
-      const url = userId
-        ? `${API_BASE_URL}/tontines/transactions?userId=${encodeURIComponent(userId)}`
-        : `${API_BASE_URL}/tontines/transactions`;
-      const response = await fetch(url, {
-        headers: { Accept: 'application/json' },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Erreur chargement transactions');
-      return data;
-    } catch (error) {
-      console.warn('Transactions fetch error:', error);
-      return {
-        success: true,
-        transactions: [],
-      };
-    }
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    return apiFetch<{ success: boolean; transactions: TransactionItem[] }>(`/tontines/transactions${query}`);
   },
 
   subscribeOffer: async (payload: SubscribeOfferPayload) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/natts/subscribe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Erreur lors de la souscription');
-      return data;
-    } catch (error) {
-      console.warn('API subscribe error:', error);
-      const title = payload.offerType === 'rotative' ? 'Natt Classique' : 'Tekk Tegui';
-      return {
-        success: true,
-        message: `Souscription réussie à la ${title} !`,
-        subscription: {
-          id: 'sub-' + Date.now(),
-          offerType: payload.offerType,
-          inviteCode: 'TE' + Math.floor(1000 + Math.random() * 9000),
-        },
-      };
-    }
+    return apiFetch('/natts/subscribe', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   joinTontine: async (payload: JoinTontinePayload) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tontines/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Code d\'invitation invalide');
-      return data;
-    } catch (error) {
-      return {
-        success: true,
-        message: `Vous avez rejoint le Natt Événementiel de Tontine Express avec le code ${payload.inviteCode}`,
-      };
-    }
+    return apiFetch('/tontines/join', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   getEventNatts: async (): Promise<{ success: boolean; events: EventNattItem[] }> => {
     try {
-      let events: EventNattItem[] = [];
-
-      // 1. Direct Firestore fetch (/event_natts)
-      if (db) {
-        try {
-          const snapshot = await getDocs(collection(db, 'event_natts'));
-          if (!snapshot.empty) {
-            events = snapshot.docs
-              .map((docSnap) => {
-                const d = docSnap.data();
-                const targetAmount = d.targetAmount || 1000000;
-                const installmentAmount = d.installmentAmount || Math.round(targetAmount / 10);
-                return {
-                  eventId: docSnap.id,
-                  title: d.title || 'Natt Événement',
-                  description: d.description || '',
-                  targetAmount,
-                  thresholdAmount: d.thresholdAmount || Math.round(targetAmount * 0.7),
-                  installmentAmount,
-                  frequency: d.frequency || 'DAILY',
-                  subscriptionDeadline: d.subscriptionDeadline || d.eventDueDate || '',
-                  eventDueDate: d.eventDueDate || '',
-                  status: d.status || 'ACTIVE',
-                };
-              })
-              .filter((e) => e.status !== 'INACTIVE' && e.status !== 'DELETED');
-          }
-        } catch (fErr) {
-          console.warn('Direct Firestore fetch event_natts warning:', fErr);
-        }
-      }
-
-      // 2. Fetch from NestJS API if direct Firestore read returned 0 items
-      if (events.length === 0) {
-        const response = await fetch(`${API_BASE_URL}/natts/events`, {
-          headers: { Accept: 'application/json' },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.events && Array.isArray(data.events)) {
-            events = data.events;
-          }
-        }
-      }
-
+      const data = await apiFetch<{ success: boolean; events: EventNattItem[] }>('/natts/events');
       return {
         success: true,
-        events,
+        events: data.events || [],
       };
     } catch (error) {
       console.warn('Event Natts fetch error:', error);
@@ -292,21 +183,10 @@ export const tontineApi = {
   },
 
   processContribution: async (payload: ProcessContributionPayload) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/payments/process-contribution`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Erreur lors du versement');
-      return data;
-    } catch (error) {
-      console.warn('API processContribution error:', error);
-      return {
-        success: true,
-        message: 'Versement de cotisation enregistré !',
-      };
-    }
+    return apiFetch('/payments/process-contribution', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 };
+

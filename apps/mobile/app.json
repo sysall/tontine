@@ -17,6 +17,7 @@
       "icon": "./assets/icon.png"
     },
     "android": {
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FDFBF7"
@@ -27,7 +28,11 @@
       "favicon": "./assets/icon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "expo-build-properties",
+      "expo-secure-store"
     ],
     "scheme": "tontineexpress"
   }

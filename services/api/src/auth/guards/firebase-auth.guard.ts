@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { FirestoreService } from '../../firestore/firestore.service';
-import { UserDocument } from '@tontine/types';
+import { findUserProfile, AuthenticatedUser } from '../user-identity';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
@@ -13,28 +13,37 @@ export class FirebaseAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const authHeader = request.headers.authorization;
+    const authHeader: string | undefined = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing or invalid Authorization header');
+      throw new UnauthorizedException('Jeton d’authentification manquant ou invalide (Bearer token requis)');
     }
 
-    const idToken = authHeader.split('Bearer ')[1];
+    const idToken = authHeader.slice('Bearer '.length).trim();
 
     try {
       const decodedToken = await this.firestoreService.auth.verifyIdToken(idToken);
-      const userDocRef = this.firestoreService.users().doc(decodedToken.uid);
-      const userSnapshot = await userDocRef.get();
+      const profile = await findUserProfile(
+        this.firestoreService,
+        decodedToken.uid,
+        decodedToken.phone_number || null,
+      );
 
-      if (!userSnapshot.exists) {
-        throw new UnauthorizedException('User profile not found in database');
+      if (!profile) {
+        throw new UnauthorizedException('Profil utilisateur introuvable dans la base de données');
       }
 
-      const user = userSnapshot.data() as UserDocument;
-      request.user = user;
+      const authUser: AuthenticatedUser = {
+        ...profile.data,
+        docId: profile.ref.id,
+        firebaseUid: decodedToken.uid,
+      };
+
+      request.user = authUser;
       return true;
-    } catch (error) {
-      throw new UnauthorizedException(`Invalid Firebase token: ${error.message}`);
+    } catch (error: any) {
+      throw new UnauthorizedException(`Jeton Firebase invalide: ${error.message}`);
     }
   }
 }
+

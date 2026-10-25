@@ -7,11 +7,16 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('TontineApi');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+
+  // Augmenter la limite du corps de requête pour accepter les photos de pièces d'identité en Base64 (KYC)
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   Linking,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,6 +22,7 @@ import {
   WhatsAppIcon,
   JoinIcon,
   BellIcon,
+  FingerprintIcon,
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
@@ -28,6 +30,8 @@ import { authApi } from '../api/authApi';
 import { kycApi } from '../api/kycApi';
 import { KycUploadModal } from '../components/KycUploadModal';
 import { auth } from '../config/firebase';
+import { secureStorage } from '../store/secureStorage';
+import { biometricsService } from '../services/biometricsService';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -72,6 +76,45 @@ export default function ProfileScreen() {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [oldPin, setOldPin] = useState('');
   const [newPin, setNewPin] = useState('');
+
+  // Biometrics State
+  const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
+  const [isBiometricsActive, setIsBiometricsActive] = useState(false);
+  const [biometryLabel, setBiometryLabel] = useState('Biométrie');
+
+  useEffect(() => {
+    (async () => {
+      const available = await biometricsService.isHardwareAvailable();
+      const active = await biometricsService.isBiometricsEnabled();
+      const label = await biometricsService.getBiometryTitle();
+      setIsBiometricsAvailable(available);
+      setIsBiometricsActive(active);
+      setBiometryLabel(label);
+    })();
+  }, []);
+
+  const handleToggleBiometrics = async (value: boolean) => {
+    if (value) {
+      const hasPin = await secureStorage.hasPin();
+      if (!hasPin) {
+        Alert.alert(
+          'Code secret requis',
+          'Veuillez d\'abord définir un code secret PIN avant d\'activer le déverrouillage biométrique.'
+        );
+        return;
+      }
+
+      const success = await biometricsService.authenticate(`Activer ${biometryLabel}`);
+      if (success) {
+        await biometricsService.setBiometricsEnabled(true);
+        setIsBiometricsActive(true);
+        Alert.alert('Succès 🔒', `${biometryLabel} a été activé avec succès pour déverrouiller l'application et valider vos opérations.`);
+      }
+    } else {
+      await biometricsService.setBiometricsEnabled(false);
+      setIsBiometricsActive(false);
+    }
+  };
 
   const handleInviteFriend = () => {
     const shareUrl = 'https://tontine-express.sn';
@@ -133,34 +176,52 @@ export default function ProfileScreen() {
     setIsSavingName(true);
 
     try {
-      // 1. Mise à jour dans Firestore via l'API NestJS
-      if (userPhone) {
-        await authApi.updateProfileName(userPhone, trimmedName);
-      }
+      // 1. Mise à jour dans Firestore via l'API NestJS authentifiée
+      await authApi.updateProfileName(trimmedName);
 
-      // 3. Mise à jour du store Zustand local
+      // 2. Mise à jour du store Zustand local
       updateProfileName(trimmedName);
       setIsEditNameModalOpen(false);
       Alert.alert('Profil mis à jour ✅', 'Votre nom a été enregistré avec succès dans Firestore.');
     } catch (error: any) {
-      console.warn('Fallback mise à jour profil:', error?.message || error);
-      updateProfileName(trimmedName);
-      setIsEditNameModalOpen(false);
-      Alert.alert('Profil mis à jour', 'Votre nom de profil a été mis à jour.');
+      console.error('Erreur mise à jour profil:', error);
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour le profil.');
     } finally {
       setIsSavingName(false);
     }
   };
 
-  const handleChangePinSubmit = () => {
-    if (newPin.trim().length < 4) {
-      Alert.alert('Code Secret Invalide', 'Veuillez saisir un code secret à 4 chiffres.');
+  const handleChangePinSubmit = async () => {
+    if (newPin.trim().length !== 4 || !/^\d{4}$/.test(newPin.trim())) {
+      Alert.alert('Code Secret Invalide', 'Veuillez saisir un code secret composé exactement de 4 chiffres.');
       return;
     }
-    setIsPinModalOpen(false);
-    setOldPin('');
-    setNewPin('');
-    Alert.alert('Code Secret Mis à Jour', 'Votre nouveau code secret à 4 chiffres a été enregistré avec succès.');
+
+    try {
+      const hasExistingPin = await secureStorage.hasPin();
+      if (hasExistingPin) {
+        if (!oldPin || oldPin.trim().length !== 4) {
+          Alert.alert('Ancien code requis', 'Veuillez renseigner votre ancien code secret à 4 chiffres.');
+          return;
+        }
+        const isValid = await secureStorage.verifyPin(oldPin.trim());
+        if (!isValid) {
+          Alert.alert('Erreur', 'L\'ancien code secret est incorrect.');
+          return;
+        }
+      }
+
+      await secureStorage.savePin(newPin.trim());
+      setIsPinModalOpen(false);
+      setOldPin('');
+      setNewPin('');
+      Alert.alert(
+        'Code Secret Enregistré 🔒',
+        'Votre code secret à 4 chiffres a été enregistré de façon chiffrée sur votre appareil.'
+      );
+    } catch (e: any) {
+      Alert.alert('Erreur', 'Impossible d\'enregistrer le code secret.');
+    }
   };
 
   const handleSavePaymentMethod = async () => {
@@ -171,13 +232,12 @@ export default function ProfileScreen() {
 
     const provider = selectedProviderTab === 'card' ? 'wave' : selectedProviderTab;
     const phone = paymentPhoneInput.trim();
-    const userPhone = user?.phoneNumber || user?.paymentPhoneNumber || '+221771234567';
 
     try {
-      // 1. Mise à jour dans Firestore via l'API NestJS
-      await authApi.updatePaymentMethod(userPhone, provider, phone);
+      // 1. Mise à jour dans Firestore via l'API NestJS authentifiée
+      await authApi.updatePaymentMethod(provider, phone);
 
-      // 3. Mise à jour du store Zustand local
+      // 2. Mise à jour du store Zustand local
       updatePaymentMethod(provider, phone);
       setIsPaymentModalOpen(false);
       Alert.alert(
@@ -185,13 +245,8 @@ export default function ProfileScreen() {
         `Votre moyen de paiement par défaut (${provider === 'wave' ? 'Wave' : 'Orange Money'}) a été enregistré avec succès dans Firestore.`
       );
     } catch (err: any) {
-      console.warn('Fallback mise à jour moyen de paiement:', err?.message || err);
-      updatePaymentMethod(provider, phone);
-      setIsPaymentModalOpen(false);
-      Alert.alert(
-        'Moyen de Paiement Mis à Jour',
-        `Votre moyen de paiement par défaut a été configuré.`
-      );
+      console.error('Erreur mise à jour moyen de paiement:', err);
+      Alert.alert('Erreur', err?.message || 'Impossible d\'enregistrer le moyen de paiement.');
     }
   };
 
@@ -360,7 +415,7 @@ export default function ProfileScreen() {
                 <Text className="text-xs text-gray-500 font-medium">
                   {kycStatusState === 'VERIFIED' ? 'CNI / Passeport validé ✓' :
                     kycStatusState === 'REJECTED' ? '❌ Dossier Rejeté - Cliquer pour réessayer' :
-                      kycStatusState.includes('PENDING') ? '⏳ KYC en cours de traitement par OCR Vision' :
+                      kycStatusState.includes('PENDING') ? '⏳ KYC en cours de traitement' :
                         'Pièce d\'identité requise (CNI/Passeport)'}
                 </Text>
               </View>
@@ -424,6 +479,31 @@ export default function ProfileScreen() {
             </View>
             <Text className="text-base text-gray-400 font-bold">›</Text>
           </TouchableOpacity>
+
+          {/* 5. Activer le déverrouillage biométrique (si supporté par le matériel) */}
+          {isBiometricsAvailable && (
+            <View className="p-4 border-t border-gray-100 flex-row justify-between items-center">
+              <View className="flex-row items-center space-x-3 flex-1 pr-3">
+                <View className="w-9 h-9 rounded-xl bg-emerald-50 items-center justify-center border border-emerald-200">
+                  <FingerprintIcon size={20} color="#10B981" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-extrabold text-brand-dark">
+                    Déverrouillage {biometryLabel}
+                  </Text>
+                  <Text className="text-xs text-gray-500">
+                    Accès rapide et sécurisé à l'application
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={isBiometricsActive}
+                onValueChange={handleToggleBiometrics}
+                trackColor={{ false: '#E2E8F0', true: '#19A66A' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+          )}
         </View>
 
         {/* Logout Button */}
@@ -443,7 +523,7 @@ export default function ProfileScreen() {
       <KycUploadModal
         visible={isKycModalOpen}
         onClose={() => setIsKycModalOpen(false)}
-        userId={user?.uid || 'user_demo_1'}
+        userId={user?.uid || ''}
         clientName={user?.fullName || user?.phoneNumber || 'Membre Tontine'}
         clientPhone={user?.phoneNumber || '770000000'}
         onKycCompleted={(res) => {

@@ -60,6 +60,42 @@ export const KycUploadModal: React.FC<KycUploadModalProps> = ({
     return true;
   };
 
+  // Compression d'image côté client (notamment sur Web pour alléger le payload et respecter les quotas)
+  const optimizeImageBase64 = async (uriOrDataUrl: string, maxWidth = 1200, quality = 0.6): Promise<string> => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
+      return new Promise((resolve) => {
+        try {
+          const img = new (window as any).Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(uriOrDataUrl);
+            ctx.drawImage(img, 0, 0, width, height);
+            try {
+              const compressed = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressed);
+            } catch {
+              resolve(uriOrDataUrl);
+            }
+          };
+          img.onerror = () => resolve(uriOrDataUrl);
+          img.src = uriOrDataUrl;
+        } catch {
+          resolve(uriOrDataUrl);
+        }
+      });
+    }
+    return uriOrDataUrl;
+  };
+
   // 1. Prendre photo CNI / Passeport (Caméra)
   const takeDocumentPhoto = async (target: 'front' | 'back') => {
     const hasPerm = await requestPermissions();
@@ -70,13 +106,14 @@ export const KycUploadModal: React.FC<KycUploadModalProps> = ({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.6,
         base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        const base64Data = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        let base64Data = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        base64Data = await optimizeImageBase64(base64Data, 1200, 0.6);
         if (target === 'front') setFrontImage(base64Data);
         else setBackImage(base64Data);
       }
@@ -95,13 +132,14 @@ export const KycUploadModal: React.FC<KycUploadModalProps> = ({
         cameraType: ImagePicker.CameraType.front,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.6,
         base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        const base64Data = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        let base64Data = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        base64Data = await optimizeImageBase64(base64Data, 800, 0.6);
         setSelfieImage(base64Data);
       }
     } catch (e: any) {
@@ -121,18 +159,27 @@ export const KycUploadModal: React.FC<KycUploadModalProps> = ({
       return;
     }
 
+    if (!userId) {
+      Alert.alert('Session Expirée', 'Veuillez vous reconnecter pour soumettre votre dossier KYC.');
+      return;
+    }
+
     setIsLoading(true);
     setKycResult(null);
 
     try {
+      const optimizedFront = await optimizeImageBase64(frontImage, 1200, 0.6);
+      const optimizedBack = backImage ? await optimizeImageBase64(backImage, 1200, 0.6) : undefined;
+      const optimizedSelfie = await optimizeImageBase64(selfieImage, 800, 0.6);
+
       const response = await kycApi.uploadKyc({
-        userId: userId || 'user_demo_1',
-        clientName: clientName || 'Client Express',
-        clientPhone: clientPhone || '770000000',
+        userId,
+        clientName: clientName || 'Membre Tontine',
+        clientPhone: clientPhone || '',
         documentType: docType,
-        documentFrontBase64: frontImage,
-        documentBackBase64: backImage || undefined,
-        selfieBase64: selfieImage,
+        documentFrontBase64: optimizedFront,
+        documentBackBase64: optimizedBack,
+        selfieBase64: optimizedSelfie,
       });
 
       setKycResult(response);

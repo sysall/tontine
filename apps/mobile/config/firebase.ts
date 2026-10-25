@@ -3,7 +3,7 @@ import { initializeAuth, getAuth, browserLocalPersistence, inMemoryPersistence }
 import { getFirestore } from 'firebase/firestore';
 import * as FirebaseAuth from 'firebase/auth';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureStorage } from '../store/secureStorage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -29,7 +29,15 @@ const getAuthPersistence = () => {
   }
   const getRnPersistence = (FirebaseAuth as any).getReactNativePersistence;
   if (typeof getRnPersistence === 'function') {
-    return getRnPersistence(AsyncStorage);
+    try {
+      const AsyncStorageModule = require('@react-native-async-storage/async-storage');
+      const storage = typeof AsyncStorageModule.createAsyncStorage === 'function'
+        ? AsyncStorageModule.createAsyncStorage('firebase-auth')
+        : (AsyncStorageModule.default || AsyncStorageModule);
+      return getRnPersistence(storage);
+    } catch (e) {
+      console.warn('Erreur chargement AsyncStorage persistence:', e);
+    }
   }
   return inMemoryPersistence;
 };

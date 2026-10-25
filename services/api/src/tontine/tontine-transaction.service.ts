@@ -13,6 +13,7 @@ import { CreateEventNattDto } from './dtos/create-event-natt.dto';
 import { UpdateEventNattDto } from './dtos/update-event-natt.dto';
 import { SubscribeNattDto } from './dtos/subscribe-natt.dto';
 import { ProcessContributionDto } from './dtos/process-contribution.dto';
+import { AuthenticatedUser, belongsToUser, userIdentifiers, normalizePhoneNumber, phonesMatch } from '../auth/user-identity';
 
 @Injectable()
 export class TontineTransactionService {
@@ -613,6 +614,39 @@ export class TontineTransactionService {
     return this.treasury;
   }
 
+  async getUserNattById(userNattId: string): Promise<UserNatt> {
+    const memory = this.userNatts.get(userNattId);
+    if (memory) return memory;
+    try {
+      const doc = await this.firestoreService.userNatts().doc(userNattId).get();
+      if (doc.exists) {
+        const data = doc.data() as UserNatt;
+        this.userNatts.set(userNattId, data);
+        return data;
+      }
+    } catch (e: any) {
+      this.logger.error(`Error loading userNatt ${userNattId} from Firestore: ${e.message}`);
+    }
+    throw new NotFoundException(`Souscription UserNatt ${userNattId} introuvable.`);
+  }
+
+  async getUserNattsForUser(user: AuthenticatedUser): Promise<UserNatt[]> {
+    try {
+      const snapshot = await this.firestoreService.userNatts().get();
+      if (!snapshot.empty) {
+        for (const doc of snapshot.docs) {
+          const d = doc.data() as UserNatt;
+          if (d && d.userNattId) {
+            this.userNatts.set(d.userNattId, d);
+          }
+        }
+      }
+    } catch (e: any) {
+      this.logger.warn(`Could not sync userNatts from Firestore: ${e.message}`);
+    }
+    return Array.from(this.userNatts.values()).filter(u => belongsToUser(u, user));
+  }
+
   getUserNattsByUserId(userId: string): UserNatt[] {
     return Array.from(this.userNatts.values()).filter(u => u.userId === userId);
   }
@@ -632,7 +666,7 @@ export class TontineTransactionService {
   /**
    * Fetch Dashboard Summary directly from Cloud Firestore
    */
-  async getDashboardSummary(userId?: string): Promise<{
+  async getDashboardSummary(userOrId?: AuthenticatedUser | string): Promise<{
     success: boolean;
     summary: {
       totalSavedFcfa: number;
@@ -666,32 +700,40 @@ export class TontineTransactionService {
 
       let userNattsList: UserNatt[] = Array.from(mergedMap.values());
 
-      // Filter userNatts list for specific userId if provided
-      if (userId) {
-        const searchTokens = new Set<string>();
-        searchTokens.add(userId);
-        const clean = userId.replace(/\D/g, '');
-        if (clean) {
-          searchTokens.add(clean);
-          searchTokens.add(`+221${clean}`);
-          searchTokens.add(`mem-${clean}`);
-        }
+      // Filter userNatts list for specific userOrId if provided
+      if (userOrId) {
+        if (typeof userOrId === 'object' && userOrId !== null) {
+          userNattsList = userNattsList.filter(natt => belongsToUser(natt, userOrId));
+        } else if (typeof userOrId === 'string' && userOrId.trim()) {
+          const rawId = userOrId.trim();
+          const searchTokens = new Set<string>();
+          searchTokens.add(rawId);
+          const clean = rawId.replace(/\D/g, '');
+          if (clean) {
+            const local9 = clean.slice(-9);
+            searchTokens.add(clean);
+            searchTokens.add(local9);
+            searchTokens.add(`+221${local9}`);
+            searchTokens.add(`221${local9}`);
+            searchTokens.add(`user_${clean}`);
+            searchTokens.add(`user_${local9}`);
+            searchTokens.add(`mem-${clean}`);
+            searchTokens.add(`mem-${local9}`);
+          }
 
-        const filteredList = userNattsList.filter((natt) => {
-          const uId = natt.userId || '';
-          const uPhone = natt.userPhone || '';
-          const uIdClean = uId.replace(/\D/g, '');
-          const uPhoneClean = uPhone.replace(/\D/g, '');
+          userNattsList = userNattsList.filter((natt) => {
+            const uId = natt.userId || '';
+            const uPhone = natt.userPhone || '';
+            const uIdClean = uId.replace(/\D/g, '');
+            const uPhoneClean = uPhone.replace(/\D/g, '');
+            const local9 = clean.slice(-9);
 
-          return (
-            searchTokens.has(uId) ||
-            searchTokens.has(uPhone) ||
-            (clean.length >= 6 && (uIdClean.includes(clean) || uPhoneClean.includes(clean)))
-          );
-        });
-
-        if (filteredList.length > 0) {
-          userNattsList = filteredList;
+            return (
+              searchTokens.has(uId) ||
+              searchTokens.has(uPhone) ||
+              (local9.length >= 9 && (uIdClean.endsWith(local9) || uPhoneClean.endsWith(local9)))
+            );
+          });
         }
       }
 
@@ -801,53 +843,196 @@ export class TontineTransactionService {
   }
 
   /**
-   * Fetch Transaction History directly from Cloud Firestore
+   * Fetch Transaction History directly from Cloud Firestore & In-memory Store
    */
-  async getTransactionsFromFirestore(userId?: string): Promise<{
+  async getTransactionsFromFirestore(userOrId?: AuthenticatedUser | string): Promise<{
     success: boolean;
     transactions: any[];
   }> {
     try {
-      let txList: Transaction[] = [];
+      const mergedTxMap = new Map<string, any>();
 
-      if (userId) {
-        let snapshot = await this.firestoreService.transactions().where('userId', '==', userId).get();
-        if (snapshot.empty) {
-          const allSnapshot = await this.firestoreService.transactions().get();
-          if (!allSnapshot.empty) {
-            txList = allSnapshot.docs.map((doc: any) => doc.data() as Transaction);
+      // 1. In-memory transactions
+      for (const tx of this.transactions) {
+        if (tx && tx.transactionId) {
+          mergedTxMap.set(tx.transactionId, tx);
+        }
+      }
+
+      // 2. Cloud Firestore transactions
+      const snapshot = await this.firestoreService.transactions().get();
+      if (!snapshot.empty) {
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          if (data && data.transactionId) {
+            mergedTxMap.set(data.transactionId, data);
           }
-        } else {
-          txList = snapshot.docs.map((doc: any) => doc.data() as Transaction);
-        }
-      } else {
-        const snapshot = await this.firestoreService.transactions().get();
-        if (!snapshot.empty) {
-          txList = snapshot.docs.map((doc: any) => doc.data() as Transaction);
         }
       }
 
-      if (txList.length === 0) {
-        txList = this.transactions;
+      let user: AuthenticatedUser | null = null;
+      let singleId: string | null = null;
+
+      if (userOrId && typeof userOrId === 'object' && ('uid' in userOrId || 'docId' in userOrId || 'phoneNumber' in userOrId)) {
+        user = userOrId as AuthenticatedUser;
+      } else if (typeof userOrId === 'string' && userOrId.trim()) {
+        singleId = userOrId.trim();
       }
 
-      const formattedTxs = txList.map((tx) => {
+      // Collect userNatts and user identifiers
+      const candidateIds = new Set<string>();
+      const userNattIds = new Set<string>();
+
+      if (user) {
+        const uIds = userIdentifiers(user);
+        uIds.forEach(id => candidateIds.add(id));
+        if (user.phoneNumber) {
+          const norm = normalizePhoneNumber(user.phoneNumber);
+          const digits = norm.replace(/\D/g, '');
+          const local9 = digits.slice(-9);
+          candidateIds.add(user.phoneNumber);
+          candidateIds.add(norm);
+          candidateIds.add(digits);
+          candidateIds.add(local9);
+          candidateIds.add(`user_${digits}`);
+          candidateIds.add(`user_${local9}`);
+          candidateIds.add(`mem-${local9}`);
+        }
+        if ((user as any).paymentPhoneNumber) {
+          const norm = normalizePhoneNumber((user as any).paymentPhoneNumber);
+          const digits = norm.replace(/\D/g, '');
+          candidateIds.add((user as any).paymentPhoneNumber);
+          candidateIds.add(norm);
+          candidateIds.add(digits);
+          candidateIds.add(digits.slice(-9));
+        }
+
+        // Get user natts for this user to match transactions by userNattId
+        const userNatts = await this.getUserNattsForUser(user);
+        for (const natt of userNatts) {
+          if (natt.userNattId) userNattIds.add(natt.userNattId);
+        }
+      } else if (singleId) {
+        candidateIds.add(singleId);
+        const digits = singleId.replace(/\D/g, '');
+        if (digits) {
+          const local9 = digits.slice(-9);
+          candidateIds.add(digits);
+          candidateIds.add(local9);
+          candidateIds.add(`+221${local9}`);
+          candidateIds.add(`221${local9}`);
+          candidateIds.add(`user_${digits}`);
+          candidateIds.add(`user_${local9}`);
+          candidateIds.add(`mem-${local9}`);
+          candidateIds.add(`mem-${digits}`);
+        }
+
+        // Sync userNatts from Firestore if memory cache is empty
+        if (!this.userNatts.size) {
+          try {
+            const snap = await this.firestoreService.userNatts().get();
+            if (!snap.empty) {
+              for (const doc of snap.docs) {
+                const d = doc.data() as UserNatt;
+                if (d && d.userNattId) this.userNatts.set(d.userNattId, d);
+              }
+            }
+          } catch (e: any) {
+            this.logger.warn(`Could not sync userNatts in getTransactions: ${e.message}`);
+          }
+        }
+
+        // Match userNatts by singleId
+        for (const natt of this.userNatts.values()) {
+          const nattUId = natt.userId || '';
+          const nattPhone = natt.userPhone || '';
+          if (
+            candidateIds.has(nattUId) ||
+            candidateIds.has(nattPhone) ||
+            (digits.length >= 6 && (nattUId.replace(/\D/g, '').includes(digits) || nattPhone.replace(/\D/g, '').includes(digits)))
+          ) {
+            if (natt.userNattId) userNattIds.add(natt.userNattId);
+            if (natt.userId) candidateIds.add(natt.userId);
+          }
+        }
+      }
+
+      const allTxs = Array.from(mergedTxMap.values());
+
+      let filteredTxs = allTxs;
+      if (user || singleId) {
+        filteredTxs = allTxs.filter((tx) => {
+          // A. Linked to user's subscription
+          if (tx.userNattId && userNattIds.has(tx.userNattId)) return true;
+
+          // B. Direct match on tx.userId
+          if (tx.userId && candidateIds.has(tx.userId)) return true;
+
+          // C. Match on tx.clientPhone or tx.userPhone
+          const txPhone = tx.clientPhone || tx.userPhone;
+          if (txPhone && candidateIds.has(txPhone)) return true;
+
+          // D. Belongs to user helper
+          if (user && belongsToUser({ userId: tx.userId, userPhone: txPhone }, user)) return true;
+
+          // E. Senegalese 9-digit suffix match
+          const cleanSingle = (singleId || user?.phoneNumber || '').replace(/\D/g, '');
+          if (cleanSingle.length >= 9) {
+            const local9 = cleanSingle.slice(-9);
+            const uClean = (tx.userId || '').replace(/\D/g, '');
+            const phoneClean = (txPhone || '').replace(/\D/g, '');
+            if ((uClean.length >= 9 && uClean.endsWith(local9)) || (phoneClean.length >= 9 && phoneClean.endsWith(local9))) {
+              return true;
+            }
+          }
+
+          return false;
+        });
+      }
+
+      // Sort newest first
+      filteredTxs.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      const formattedTxs = filteredTxs.map((tx) => {
         const isPayout = tx.type === 'NATT_PAYOUT';
         const dateObj = new Date(tx.createdAt);
         const months = [
           'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
         ];
-        const formattedDate = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()} à ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+        const formattedDate = !isNaN(dateObj.getTime())
+          ? `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()} à ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`
+          : (tx.createdAt || 'Date inconnue');
+
+        const userNatt = tx.userNattId ? this.userNatts.get(tx.userNattId) : null;
+        const nattTitle = tx.nattTitle || userNatt?.title || (tx.userNattId ? 'Natt Express' : 'Cotisation');
+
+        let provider: 'wave' | 'orange_money' | 'free_money' = 'wave';
+        let providerName = 'Wave Sénégal';
+        const gwUpper = (tx.gateway || '').toUpperCase();
+        if (gwUpper.includes('ORANGE')) {
+          provider = 'orange_money';
+          providerName = 'Orange Money';
+        } else if (gwUpper.includes('FREE')) {
+          provider = 'free_money';
+          providerName = 'Free Money';
+        } else if (gwUpper.includes('VIREMENT')) {
+          provider = 'wave';
+          providerName = 'Virement Bancaire';
+        }
 
         return {
           id: tx.transactionId,
           type: isPayout ? 'payout' : 'contribution',
-          title: isPayout ? 'Versement du Natt' : 'Cotisation Natt',
-          tontineName: tx.userNattId ? 'Natt Express' : 'Cotisation',
+          title: isPayout ? 'Versement du Natt' : (nattTitle ? `Cotisation ${nattTitle}` : 'Cotisation Natt'),
+          tontineName: nattTitle,
           amountFcfa: tx.amount,
-          provider: tx.gateway ? tx.gateway.toLowerCase().replace('_', '') : 'wave',
-          providerName: tx.gateway === 'ORANGE_MONEY' ? 'Orange Money' : 'Wave Sénégal',
+          provider,
+          providerName,
           reference: tx.gatewayReference || tx.transactionId,
           date: formattedDate,
           status: tx.status || 'SUCCESS',

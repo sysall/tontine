@@ -8,8 +8,15 @@ export default function IndexScreen() {
   const router = useRouter();
   const isCompleted = useOnboardingStore((state) => state.isCompleted);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoaded = useAuthStore((state) => state.isLoaded);
+  const initAuth = useAuthStore((state) => state.initAuth);
 
   useEffect(() => {
+    initAuth();
+  }, [initAuth]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
     const timer = setTimeout(() => {
       if (isAuthenticated) {
         router.replace('/dashboard');
@@ -21,7 +28,7 @@ export default function IndexScreen() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [isCompleted, isAuthenticated, router]);
+  }, [isLoaded, isCompleted, isAuthenticated, router]);
 
   return (
     <View className="flex-1 items-center justify-center bg-brand-beige">

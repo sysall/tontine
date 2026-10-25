@@ -459,7 +459,7 @@ export default function DashboardScreen() {
                     </Text>
                     <View className="flex-row items-center space-x-1 mt-0.5">
                       <Text className="text-[10px] font-bold text-gray-400">
-                        {tx.provider === 'wave' ? 'Wave' : 'Orange Money'}
+                        {tx.providerName || (tx.provider === 'wave' ? 'Wave' : 'Orange Money')}
                       </Text>
                       <ReceiptIcon size={12} color="#9CA3AF" />
                     </View>

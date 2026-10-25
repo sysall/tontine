@@ -1,7 +1,9 @@
-import { Controller, Post, Get, Body, Param, Query, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, Logger, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { KycService, UploadKycDto } from './kyc.service';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
+import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
+import { AuthenticatedUser, belongsToUser } from '../auth/user-identity';
 
 @ApiTags('KYC & Pièces d\'Identité')
 @Controller('api/v1/kyc')
@@ -11,16 +13,27 @@ export class KycController {
   constructor(private readonly kycService: KycService) {}
 
   @Post('upload')
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Téléverser Recto/Verso (CNI / Passeport) + Selfie pour vérification manuelle admin' })
   @ApiResponse({ status: 200, description: 'Dossier KYC enregistré et soumis à l\'administration pour validation' })
-  async uploadKyc(@Body() dto: UploadKycDto) {
-    this.logger.log(`POST /api/v1/kyc/upload pour ${dto.clientName || dto.userId}`);
+  async uploadKyc(@Req() req: { user: AuthenticatedUser }, @Body() dto: UploadKycDto) {
+    dto.userId = req.user.docId || req.user.uid;
+    dto.clientPhone = req.user.phoneNumber || dto.clientPhone || dto.userId;
+    dto.clientName = req.user.fullName || dto.clientName || 'Membre Tontine';
+
+    this.logger.log(`POST /api/v1/kyc/upload pour ${dto.clientName} (${dto.userId})`);
     return this.kycService.uploadKycDocument(dto);
   }
 
   @Get('status/:userId')
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Vérifier le statut KYC en temps réel d\'un utilisateur' })
-  async getStatus(@Param('userId') userId: string) {
+  async getStatus(@Req() req: { user: AuthenticatedUser }, @Param('userId') userId: string) {
+    if (!belongsToUser({ userId }, req.user) && req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Vous n’êtes pas autorisé à consulter ce statut KYC.');
+    }
     return this.kycService.getKycStatus(userId);
   }
 

@@ -15,9 +15,11 @@ import {
 } from '../components/Icons';
 import { useNotificationStore, NotificationType } from '../store/useNotificationStore';
 import { registerForPushNotificationsAsync } from '../services/notificationService';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
   const {
     notifications,
     markAsRead,
@@ -27,9 +29,17 @@ export default function NotificationsScreen() {
   } = useNotificationStore();
 
   useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.replace('/login');
+      return;
+    }
     loadNotificationsFromStorage();
     registerForPushNotificationsAsync();
-  }, []);
+  }, [isAuthenticated, user, router]);
+
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   const unreadTotal = unreadCount();
 

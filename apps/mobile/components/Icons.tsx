@@ -335,3 +335,39 @@ export const SettingsIcon: React.FC<IconProps> = ({ size = 22, color = '#0F172A'
     />
   </Svg>
 );
+
+// 👆 Fingerprint / Biometric Icon
+export const FingerprintIcon: React.FC<IconProps> = ({ size = 24, color = '#19A66A' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 3C7.58 3 4 6.58 4 11C4 13.5 5 15.5 6.5 17.5"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    />
+    <Path
+      d="M20 11C20 6.58 16.42 3 12 3"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    />
+    <Path
+      d="M17.5 17.5C16 19 14.5 20.5 12 21"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    />
+    <Path
+      d="M8 11C8 8.79 9.79 7 12 7C14.21 7 16 8.79 16 11C16 15 12 17.5 12 19"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    />
+    <Path
+      d="M12 11V13"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+    />
+  </Svg>
+);

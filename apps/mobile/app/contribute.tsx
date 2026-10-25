@@ -7,14 +7,17 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { WalletIcon, SmartphoneIcon, ShieldCheckIcon, CalendarIcon } from '../components/Icons';
+import { WalletIcon, SmartphoneIcon, ShieldCheckIcon, CalendarIcon, FingerprintIcon } from '../components/Icons';
 import { useDashboardSummary, useProcessContribution } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 import { useAuthStore } from '../store/useAuthStore';
 import { auth } from '../config/firebase';
+import { secureStorage } from '../store/secureStorage';
+import { biometricsService } from '../services/biometricsService';
 
 export default function ContributeScreen() {
   const router = useRouter();
@@ -43,12 +46,72 @@ export default function ContributeScreen() {
   const [selectedProvider, setSelectedProvider] = useState<'wave' | 'orange_money'>('wave');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isPinStep, setIsPinStep] = useState(false);
+  const [enteredPin, setEnteredPin] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  const initiatePayment = async () => {
+    if (!selectedTontine) return;
+
+    // 1. Tenter la validation biométrique (Face ID / Empreinte) si activée
+    try {
+      const isBioActive = await biometricsService.isBiometricsEnabled();
+      const hasHardware = await biometricsService.isHardwareAvailable();
+
+      if (isBioActive && hasHardware) {
+        const bioTitle = await biometricsService.getBiometryTitle();
+        const bioSuccess = await biometricsService.authenticate(
+          `Confirmer le versement de ${selectedTontine.amountPerCycle.toLocaleString('fr-FR')} FCFA avec ${bioTitle}`
+        );
+        if (bioSuccess) {
+          await handlePay();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Erreur validation biométrique:', e);
+    }
+
+    // 2. Sinon, validation par code secret PIN
+    const hasPin = await secureStorage.hasPin();
+    if (hasPin) {
+      setIsPinStep(true);
+      setPinError(null);
+      setEnteredPin('');
+      return;
+    }
+
+    await handlePay();
+  };
+
+  const handleConfirmPinAndPay = async () => {
+    if (enteredPin.length !== 4) {
+      setPinError('Veuillez saisir votre code secret à 4 chiffres.');
+      return;
+    }
+
+    const isValid = await secureStorage.verifyPin(enteredPin);
+    if (!isValid) {
+      setPinError('Code secret incorrect. Veuillez réessayer.');
+      return;
+    }
+
+    setPinError(null);
+    await handlePay();
+  };
 
   const handlePay = async () => {
     if (!selectedTontine) return;
     setIsProcessing(true);
 
-    const effectiveUserId = user?.uid || user?.id || auth?.currentUser?.uid || user?.phoneNumber || 'user_demo_1';
+    const effectiveUserId = user?.uid || user?.id || auth?.currentUser?.uid || user?.phoneNumber;
+    if (!effectiveUserId) {
+      setIsProcessing(false);
+      Alert.alert('Session Expirée', 'Veuillez vous reconnecter pour effectuer un versement.');
+      router.replace('/login');
+      return;
+    }
+
     const providerKey: 'WAVE' | 'ORANGE_MONEY' = selectedProvider === 'wave' ? 'WAVE' : 'ORANGE_MONEY';
 
     try {
@@ -61,6 +124,7 @@ export default function ContributeScreen() {
       });
 
       refetch();
+      setIsPinStep(false);
       setPaymentSuccess(true);
     } catch (err: any) {
       console.error('Error executing contribution payment:', err);
@@ -73,6 +137,9 @@ export default function ContributeScreen() {
   const handleCloseModal = () => {
     setSelectedTontine(null);
     setPaymentSuccess(false);
+    setIsPinStep(false);
+    setEnteredPin('');
+    setPinError(null);
     refetch();
   };
 
@@ -254,6 +321,68 @@ export default function ContributeScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+            ) : isPinStep ? (
+              <View className="py-2">
+                <View className="flex-row items-center space-x-2 mb-2">
+                  <View className="w-8 h-8 rounded-full bg-emerald-100 items-center justify-center">
+                    <ShieldCheckIcon size={18} color="#19A66A" />
+                  </View>
+                  <Text className="text-base font-black text-brand-dark">
+                    Confirmation Sécurisée 🔒
+                  </Text>
+                </View>
+
+                <Text className="text-xs text-gray-500 mb-4 font-medium">
+                  Veuillez saisir votre code secret à 4 chiffres pour confirmer le versement de {selectedTontine?.amountPerCycle.toLocaleString('fr-FR')} FCFA via {selectedProvider === 'wave' ? 'Wave' : 'Orange Money'}.
+                </Text>
+
+                <Text className="text-xs font-bold text-gray-600 mb-1.5 uppercase">
+                  Code Secret PIN (4 chiffres)
+                </Text>
+                <TextInput
+                  className="bg-gray-50 border border-gray-300 rounded-2xl p-4 text-2xl font-black text-center text-brand-dark tracking-widest mb-2"
+                  placeholder="••••"
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={4}
+                  value={enteredPin}
+                  onChangeText={(txt) => {
+                    setEnteredPin(txt);
+                    if (pinError) setPinError(null);
+                  }}
+                />
+
+                {pinError && (
+                  <Text className="text-xs font-bold text-red-500 text-center mb-3">
+                    {pinError}
+                  </Text>
+                )}
+
+                <TouchableOpacity
+                  onPress={handleConfirmPinAndPay}
+                  disabled={isProcessing}
+                  activeOpacity={0.85}
+                  className="w-full bg-[#173F73] active:bg-[#1A4A82] py-4 rounded-2xl items-center justify-center border border-[#19A66A]/30 mb-2 mt-2"
+                >
+                  {isProcessing ? (
+                    <ActivityIndicator color="#19A66A" />
+                  ) : (
+                    <Text className="text-xs font-black text-[#19A66A] uppercase tracking-wider">
+                      CONFIRMER LE VERSEMENT
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setIsPinStep(false)}
+                  activeOpacity={0.7}
+                  className="py-2 items-center"
+                >
+                  <Text className="text-xs font-bold text-gray-500">
+                    ← Revenir au choix du moyen de paiement
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <View>
                 <Text className="text-xs font-extrabold uppercase text-gray-400 mb-3">
@@ -312,7 +441,7 @@ export default function ContributeScreen() {
 
                 {/* Submit Payment Button */}
                 <TouchableOpacity
-                  onPress={handlePay}
+                  onPress={initiatePayment}
                   disabled={isProcessing}
                   activeOpacity={0.85}
                   className="w-full bg-[#173F73] active:bg-[#1A4A82] py-4 rounded-2xl items-center justify-center border border-[#19A66A]/30"

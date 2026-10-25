@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -39,6 +40,21 @@ export default function LoginScreen() {
   // OTP Form State
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState<string | null>(null);
+
+  // OTP Limiting & Anti-Bruteforce State
+  const MAX_OTP_ATTEMPTS = 3;
+  const [failedAttempts, setFailedAttempts] = useState<number>(0);
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+
+  useEffect(() => {
+    let timer: any = null;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [resendCooldown]);
 
   // Firebase Phone Auth Confirmation Result & Loading State
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
@@ -116,16 +132,41 @@ export default function LoginScreen() {
     setPhoneError(null);
 
     try {
+      if (Platform.OS !== 'web') {
+        try {
+          const rnfbAuth = require('@react-native-firebase/auth').default;
+          const confirmation = await rnfbAuth().signInWithPhoneNumber(fullPhone);
+          setConfirmationResult(confirmation);
+          setStep('otp');
+          setOtpError(null);
+          setOtpCode('');
+          setFailedAttempts(0);
+          setResendCooldown(60);
+          return;
+        } catch (nativeErr: any) {
+          console.warn('Native Firebase Auth non disponible dans ce runtime, fallback JS SDK:', nativeErr?.message);
+        }
+      }
+
       const verifier = getRecaptchaVerifier();
       const confirmation = await signInWithPhoneNumber(auth, fullPhone, verifier);
       setConfirmationResult(confirmation);
       setStep('otp');
       setOtpError(null);
+      setOtpCode('');
+      setFailedAttempts(0);
+      setResendCooldown(60);
     } catch (err: any) {
-      console.warn('Firebase Phone Auth (Mode fallback actif pour numéros de test):', err?.message || err);
-      setConfirmationResult(null);
-      setStep('otp');
-      setOtpError(null);
+      console.error('Firebase Phone Auth error:', err);
+      let errorMsg = 'Échec de l\'envoi du code OTP. Veuillez vérifier votre numéro et réessayer.';
+      if (err?.code === 'auth/invalid-phone-number') {
+        errorMsg = 'Numéro de téléphone non valide.';
+      } else if (err?.code === 'auth/too-many-requests') {
+        errorMsg = 'Trop de demandes de SMS pour ce numéro. Veuillez patienter avant de réessayer.';
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+      setPhoneError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -142,17 +183,13 @@ export default function LoginScreen() {
     setOtpError(null);
 
     try {
-      let idToken: string;
-
-      if (confirmationResult) {
-        // 1. Confirm code with Firebase Auth
-        const userCredential = await confirmationResult.confirm(otpCode);
-        idToken = await userCredential.user.getIdToken();
-      } else {
-        // Fallback for test phone numbers / dev mode when SMS region is restricted
-        const cleanPhone = fullPhone.replace(/[\+\s\-]/g, '');
-        idToken = `firebase_test_id_token_${cleanPhone}`;
+      if (!confirmationResult) {
+        throw new Error('Session OTP expirée. Veuillez demander un nouveau code.');
       }
+
+      // 1. Confirm code with Firebase Auth (returns genuine Firebase user with real ID token)
+      const userCredential = await confirmationResult.confirm(otpCode);
+      const idToken = await userCredential.user.getIdToken();
 
       // 2. Synchronize token with backend API
       const res = await firebaseLoginMutation.mutateAsync({
@@ -162,19 +199,20 @@ export default function LoginScreen() {
       });
 
       // 3. Update Zustand Store State
-      const userId = res.user?.uid || res.user?.id;
+      const userId = res.user?.uid || res.user?.id || userCredential.user.uid;
       const cleanLocalPhone = phoneNumber.replace(/[^\d]/g, '').slice(-9);
       const formattedDefaultName = cleanLocalPhone.length === 9 
         ? `Membre (+221 ${cleanLocalPhone.slice(0, 2)} ${cleanLocalPhone.slice(2, 5)} ${cleanLocalPhone.slice(5, 7)} ${cleanLocalPhone.slice(7)})`
         : `Membre (${phoneNumber})`;
 
+      setFailedAttempts(0);
       setAuth(
         {
           uid: userId,
           id: userId,
           phoneNumber: res.user?.phoneNumber || fullPhone,
           fullName: res.user?.fullName || (fullName.trim() ? fullName.trim() : formattedDefaultName),
-          isVerified: true,
+          isVerified: !!res.user?.isVerified,
         },
         res.token || idToken
       );
@@ -183,11 +221,49 @@ export default function LoginScreen() {
       router.replace('/dashboard');
     } catch (err: any) {
       console.error('Erreur de validation du code OTP:', err);
-      let message = 'Code OTP invalide ou expiré';
-      if (err.code === 'auth/invalid-verification-code') {
-        message = 'Code de vérification Firebase invalide.';
-      } else if (err.message) {
-        message = err.message;
+      const newFailed = failedAttempts + 1;
+      setFailedAttempts(newFailed);
+
+      if (err?.code === 'auth/too-many-requests') {
+        Alert.alert(
+          'Trop de tentatives 🔒',
+          'Trop de tentatives erronées ont été détectées. Pour votre sécurité, veuillez patienter quelques minutes avant de demander un nouveau code.'
+        );
+        setStep('phone');
+        setConfirmationResult(null);
+        setOtpCode('');
+        setFailedAttempts(0);
+        return;
+      }
+
+      if (err?.code === 'auth/session-expired' || err?.code === 'auth/code-expired') {
+        Alert.alert(
+          'Session expirée',
+          'Le code de vérification a expiré. Veuillez demander un nouveau code par SMS.'
+        );
+        setStep('phone');
+        setConfirmationResult(null);
+        setOtpCode('');
+        setFailedAttempts(0);
+        return;
+      }
+
+      if (newFailed >= MAX_OTP_ATTEMPTS) {
+        Alert.alert(
+          'Limite de tentatives atteinte 🔒',
+          `Vous avez saisi un code erroné ${MAX_OTP_ATTEMPTS} fois consécutives. Cette session a été verrouillée pour votre sécurité. Veuillez demander un nouveau code.`
+        );
+        setStep('phone');
+        setConfirmationResult(null);
+        setOtpCode('');
+        setFailedAttempts(0);
+        return;
+      }
+
+      const remaining = MAX_OTP_ATTEMPTS - newFailed;
+      let message = `Code OTP incorrect. ${remaining} tentative${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}.`;
+      if (err?.code === 'auth/invalid-verification-code') {
+        message = `Code de vérification Firebase incorrect. ${remaining} tentative${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}.`;
       }
       setOtpError(message);
     } finally {
@@ -372,10 +448,23 @@ export default function LoginScreen() {
                   )}
                 </TouchableOpacity>
 
+                {/* Resend OTP button with 60s cooldown */}
+                <TouchableOpacity
+                  onPress={handleSendOtp}
+                  disabled={resendCooldown > 0 || isSubmitting}
+                  className="mt-3 py-2 items-center"
+                >
+                  <Text className={`text-xs font-bold ${resendCooldown > 0 ? 'text-gray-400' : 'text-brand-primary'}`}>
+                    {resendCooldown > 0
+                      ? `Renvoyer le code SMS (${resendCooldown}s)`
+                      : 'Renvoyer un nouveau code SMS'}
+                  </Text>
+                </TouchableOpacity>
+
                 {/* Modify Phone Link */}
                 <TouchableOpacity
                   onPress={() => setStep('phone')}
-                  className="mt-4 py-2 items-center"
+                  className="mt-2 py-2 items-center"
                 >
                   <Text className="text-xs font-extrabold text-[#173F73]">
                     Modifier le numéro de téléphone

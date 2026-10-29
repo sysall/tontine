@@ -21,8 +21,7 @@ import {
   ReceiptIcon,
 } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
-import { useNotificationStore } from '../store/useNotificationStore';
-import { registerForPushNotificationsAsync } from '../services/notificationService';
+import NotificationBell from '../components/NotificationBell';
 import { OFFICIAL_OFFERS, OfficialOffer, OfficialTier, TransactionItem, ActiveTontineItem, EventNattItem } from '../api/tontineApi';
 import {
   useDashboardSummary,
@@ -46,13 +45,11 @@ export const EVENT_OPTIONS = [
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-  const unreadNotifsCount = useNotificationStore((state) => state.unreadCount());
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
       router.replace('/login');
     }
-    registerForPushNotificationsAsync();
   }, [isAuthenticated, user, router]);
 
   // Transaction Filter State
@@ -179,18 +176,7 @@ export default function DashboardScreen() {
           </View>
 
           {/* Bell Icon Notification Button */}
-          <TouchableOpacity
-            onPress={() => router.push('/notifications')}
-            activeOpacity={0.7}
-            className="w-10 h-10 items-center justify-center relative"
-          >
-            <BellIcon size={22} color="#173F73" />
-            {unreadNotifsCount > 0 && (
-              <View className="absolute top-1 right-1 bg-red-500 min-w-[16px] h-[16px] rounded-full items-center justify-center px-1">
-                <Text className="text-[9px] font-black text-white">{unreadNotifsCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <NotificationBell />
         </View>
 
         {/* Official Brand Hero Balance Card */}

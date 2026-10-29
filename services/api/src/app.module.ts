@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { KycModule } from './kyc/kyc.module';
 import { TontineModule } from './tontine/tontine.module';
 import { PaymentModule } from './payment/payment.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PaymentModule } from './payment/payment.module';
     KycModule,
     TontineModule,
     PaymentModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

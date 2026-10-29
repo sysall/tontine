@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { WalletIcon, SmartphoneIcon, ShieldCheckIcon, CalendarIcon, FingerprintIcon } from '../components/Icons';
 import { useDashboardSummary, useProcessContribution } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
@@ -43,6 +43,18 @@ export default function ContributeScreen() {
 
   // Payment Selection State
   const [selectedTontine, setSelectedTontine] = useState<ActiveTontineItem | null>(null);
+
+  // Preselect the Natt targeted by an overdue notification (?nattId=...), only once
+  const { nattId } = useLocalSearchParams<{ nattId?: string }>();
+  const didPreselect = useRef(false);
+  useEffect(() => {
+    if (!nattId || didPreselect.current) return;
+    const target = activeTontines.find((t) => t.id === nattId);
+    if (target) {
+      didPreselect.current = true;
+      setSelectedTontine(target);
+    }
+  }, [nattId, activeTontines]);
   const [selectedProvider, setSelectedProvider] = useState<'wave' | 'orange_money'>('wave');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -226,7 +238,7 @@ export default function ContributeScreen() {
                 <View className="flex-1 pr-2">
                   <Text className="text-lg font-black text-brand-dark">{tontine.name}</Text>
                   <Text className="text-xs text-gray-500 font-semibold mt-0.5">
-                    {tontine.category}
+                    Montant total : {(tontine.targetAmountFcfa || (tontine.amountPerCycle * tontine.totalTours)).toLocaleString('fr-FR')} FCFA
                   </Text>
                 </View>
                 <View className="px-3 py-1 bg-[#D4F2E4] rounded-full border border-[#19A66A]">

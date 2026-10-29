@@ -371,3 +371,39 @@ export const FingerprintIcon: React.FC<IconProps> = ({ size = 24, color = '#19A6
     />
   </Svg>
 );
+
+// 🔽 Chevron Down Icon
+export const ChevronDownIcon: React.FC<IconProps> = ({ size = 16, color = '#6B7280' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M6 9L12 15L18 9"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+// 🔍 Search Icon
+export const SearchIcon: React.FC<IconProps> = ({ size = 18, color = '#9CA3AF' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    <Path d="M20 20L16 16" stroke={color} strokeWidth={2} strokeLinecap="round" />
+  </Svg>
+);
+
+// ✖ Close / Clear Icon
+export const CloseIcon: React.FC<IconProps> = ({ size = 18, color = '#9CA3AF' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M18 6L6 18M6 6L18 18" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+// ✔ Checkmark Icon
+export const CheckIcon: React.FC<IconProps> = ({ size = 18, color = '#19A66A' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M20 6L9 17L4 12" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+

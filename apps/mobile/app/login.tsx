@@ -15,7 +15,8 @@ import { useRouter } from 'expo-router';
 import { signInWithPhoneNumber, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { TontineLogo } from '../components/TontineLogo';
-import { PhoneInput } from '../components/PhoneInput';
+import { PhoneInput, Country, DEFAULT_COUNTRY } from '../components/PhoneInput';
+import { LegalModal } from '../components/LegalModal';
 import { useFirebaseLogin } from '../api/useAuth';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -26,12 +27,22 @@ export default function LoginScreen() {
   // Auth Mode State: 'login' or 'register'
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
+  // Legal Modal State (CGU / Politique de Confidentialité)
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<'terms' | 'privacy'>('terms');
+
+  const handleOpenLegal = (tab: 'terms' | 'privacy') => {
+    setLegalInitialTab(tab);
+    setIsLegalModalOpen(true);
+  };
+
   // Registration Extra Fields
   const [fullName, setFullName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
 
   // Phone Form State
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // Step: 'phone' or 'otp'
@@ -65,10 +76,18 @@ export default function LoginScreen() {
 
   const validatePhone = (phone: string): boolean => {
     const cleaned = phone.replace(/\s+/g, '');
-    const isValid = /^[7][06789]\d{7}$/.test(cleaned);
-    if (!isValid) {
-      setPhoneError('Numéro invalide (ex: 77 123 45 67)');
-      return false;
+    if (selectedCountry.code === 'SN') {
+      const isValid = /^[7][06789]\d{7}$/.test(cleaned);
+      if (!isValid) {
+        setPhoneError('Numéro invalide (ex: 77 123 45 67)');
+        return false;
+      }
+    } else {
+      const maxLen = selectedCountry.maxLength || 15;
+      if (cleaned.length < 6 || cleaned.length > maxLen) {
+        setPhoneError(`Numéro invalide pour ${selectedCountry.name}`);
+        return false;
+      }
     }
     setPhoneError(null);
     return true;
@@ -127,7 +146,7 @@ export default function LoginScreen() {
     if (!validatePhone(phoneNumber)) return;
     if (mode === 'register' && !validateName(fullName)) return;
 
-    const fullPhone = `+221${phoneNumber}`;
+    const fullPhone = `${selectedCountry.dialCode}${phoneNumber}`;
     setIsSubmitting(true);
     setPhoneError(null);
 
@@ -178,7 +197,7 @@ export default function LoginScreen() {
       return;
     }
 
-    const fullPhone = `+221${phoneNumber}`;
+    const fullPhone = `${selectedCountry.dialCode}${phoneNumber}`;
     setIsSubmitting(true);
     setOtpError(null);
 
@@ -200,10 +219,11 @@ export default function LoginScreen() {
 
       // 3. Update Zustand Store State
       const userId = res.user?.uid || res.user?.id || userCredential.user.uid;
-      const cleanLocalPhone = phoneNumber.replace(/[^\d]/g, '').slice(-9);
-      const formattedDefaultName = cleanLocalPhone.length === 9 
-        ? `Membre (+221 ${cleanLocalPhone.slice(0, 2)} ${cleanLocalPhone.slice(2, 5)} ${cleanLocalPhone.slice(5, 7)} ${cleanLocalPhone.slice(7)})`
-        : `Membre (${phoneNumber})`;
+      const cleanLocalPhone = phoneNumber.replace(/[^\d]/g, '');
+      const formattedDefaultName =
+        selectedCountry.code === 'SN' && cleanLocalPhone.length === 9
+          ? `Membre (+221 ${cleanLocalPhone.slice(0, 2)} ${cleanLocalPhone.slice(2, 5)} ${cleanLocalPhone.slice(5, 7)} ${cleanLocalPhone.slice(7)})`
+          : `Membre (${selectedCountry.dialCode} ${cleanLocalPhone})`;
 
       setFailedAttempts(0);
       setAuth(
@@ -376,6 +396,11 @@ export default function LoginScreen() {
                     setPhoneNumber(val);
                     if (phoneError) setPhoneError(null);
                   }}
+                  selectedCountry={selectedCountry}
+                  onSelectCountry={(c) => {
+                    setSelectedCountry(c);
+                    if (phoneError) setPhoneError(null);
+                  }}
                   error={phoneError}
                 />
 
@@ -411,7 +436,9 @@ export default function LoginScreen() {
                 </Text>
                 <Text className="text-xs text-gray-500 font-medium mb-4">
                   Un code à 6 chiffres a été envoyé par SMS via Firebase au{' '}
-                  <Text className="font-bold text-brand-dark">+221 {phoneNumber}</Text>
+                  <Text className="font-bold text-brand-dark">
+                    {selectedCountry.dialCode} {phoneNumber}
+                  </Text>
                 </Text>
 
                 {/* OTP Code Input */}
@@ -477,15 +504,32 @@ export default function LoginScreen() {
             <View className="mt-6 pt-4 border-t border-gray-100 items-center">
               <Text className="text-[10px] text-gray-400 text-center leading-relaxed">
                 En continuant, vous acceptez les{' '}
-                <Text className="underline font-bold text-gray-600">Conditions d'utilisation</Text>{' '}
+                <Text
+                  onPress={() => handleOpenLegal('terms')}
+                  className="underline font-bold text-[#173F73] active:opacity-60"
+                >
+                  Conditions d'utilisation
+                </Text>{' '}
                 et la{' '}
-                <Text className="underline font-bold text-gray-600">Politique de confidentialité</Text>{' '}
+                <Text
+                  onPress={() => handleOpenLegal('privacy')}
+                  className="underline font-bold text-[#173F73] active:opacity-60"
+                >
+                  Politique de confidentialité
+                </Text>{' '}
                 de Tontine Express
               </Text>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Interactive Legal Documents Modal */}
+      <LegalModal
+        visible={isLegalModalOpen}
+        initialTab={legalInitialTab}
+        onClose={() => setIsLegalModalOpen(false)}
+      />
     </SafeAreaView>
   );
 }

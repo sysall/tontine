@@ -29,6 +29,7 @@ export interface ActiveTontineItem {
   name: string;
   offerType: 'rotative' | 'projet';
   category: string;
+  targetAmountFcfa?: number;
   amountPerCycle: number;
   currentTurn: number;
   totalTours: number;

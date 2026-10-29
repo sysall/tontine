@@ -4,7 +4,6 @@ import { signOut } from 'firebase/auth';
 import { auth as webAuth } from '../config/firebase';
 import { secureStorage } from './secureStorage';
 import { queryClient } from '../api/queryClient';
-import { useNotificationStore } from './useNotificationStore';
 
 export interface UserProfile {
   uid?: string;
@@ -93,11 +92,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       secureStorage.removeItem('auth_user').catch(() => {});
       secureStorage.removeItem('auth_token').catch(() => {});
 
-      // Nettoyer les caches locaux et données privées en mémoire
+      // Nettoyer les caches locaux et données privées en mémoire (y compris les notifications)
       queryClient.clear();
-      try {
-        useNotificationStore.getState().clearNotifications();
-      } catch (e) {}
     } catch (e) {}
     set({ user: null, token: null, isAuthenticated: false });
   },

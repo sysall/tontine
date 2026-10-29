@@ -78,5 +78,12 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (resource.data.clientId == request.auth.uid || isAdmin());
       allow write: if false;
     }
+
+    // 9. User Notifications (/notifications/{notificationId})
+    // Created by the backend only (overdue reminders, admin payouts). Read/updates go through the API.
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
   }
 }

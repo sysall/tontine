@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FirestoreService } from '../firestore/firestore.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface TreasuryMetrics {
   totalBalanceFcfa: number;
@@ -151,7 +152,10 @@ export class AdminBackofficeService {
   private kycRecords: KycRecord[] = [];
   private overdueContributions: OverdueContribution[] = [];
 
-  constructor(private readonly firestoreService: FirestoreService) {}
+  constructor(
+    private readonly firestoreService: FirestoreService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Sync directly with Cloud Firestore collections (/users, /user_natts, /event_natts, /transactions, /kyc_documents, /treasury)
@@ -623,6 +627,18 @@ export class AdminBackofficeService {
       }, { merge: true });
 
       this.logger.log(`Payout processed for ${targetSub.clientName} (${payoutAmount} FCFA) via ${provider}`);
+
+      // 4. Notify the client in-app
+      await this.notificationsService.notifyPayout({
+        userId: userNattData?.userId || targetSub.clientId,
+        userPhone: userNattData?.userPhone || targetSub.clientPhone,
+        userNattId: subscriptionId,
+        nattTitle: targetSub.categoryTitle,
+        amountFcfa: payoutAmount,
+        provider,
+        reference: txRef,
+        transactionId: txId,
+      });
     } catch (err: any) {
       this.logger.error(`Failed to process payout in Firestore: ${err.message}`);
     }

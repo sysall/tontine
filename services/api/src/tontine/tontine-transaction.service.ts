@@ -14,6 +14,7 @@ import { UpdateEventNattDto } from './dtos/update-event-natt.dto';
 import { SubscribeNattDto } from './dtos/subscribe-natt.dto';
 import { ProcessContributionDto } from './dtos/process-contribution.dto';
 import { AuthenticatedUser, belongsToUser, userIdentifiers, normalizePhoneNumber, phonesMatch } from '../auth/user-identity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TontineTransactionService {
@@ -71,7 +72,20 @@ export class TontineTransactionService {
   // 6. Global Financial Transactions (/transactions)
   private readonly transactions: Transaction[] = [];
 
-  constructor(private readonly firestoreService: FirestoreService) {}
+  constructor(
+    private readonly firestoreService: FirestoreService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
+  /** Next installment date: one period after the current due date (keeps the schedule if the user is late). */
+  private advanceDueDate(currentDueIso: string | undefined, frequency: string | undefined): string {
+    const base = currentDueIso ? new Date(currentDueIso) : new Date();
+    const next = Number.isNaN(base.getTime()) ? new Date() : base;
+    if (frequency === 'DAILY') next.setDate(next.getDate() + 1);
+    else if (frequency === 'WEEKLY') next.setDate(next.getDate() + 7);
+    else next.setMonth(next.getMonth() + 1);
+    return next.toISOString();
+  }
 
   // --- CATALOG & EVENT METHODS ---
 
@@ -424,6 +438,7 @@ export class TontineTransactionService {
     userNatt.totalPaid += dto.amount;
     userNatt.remainingBalance = Math.max(0, userNatt.targetAmount - userNatt.totalPaid);
     userNatt.paidInstallmentsCount += 1;
+    userNatt.nextDueDate = this.advanceDueDate(userNatt.nextDueDate, userNatt.frequency);
     userNatt.updatedAt = nowIso;
 
     // 2. Create Payment record in sub-collection
@@ -563,6 +578,19 @@ export class TontineTransactionService {
     });
 
     this.logger.log(`💸 [ADMIN PAYOUT EXECUTED] 100% Payout of ${payoutAmount} FCFA disbursed via ${provider} to User ${userNatt.userId} for Natt ${userNatt.title}!`);
+
+    this.notificationsService
+      .notifyPayout({
+        userId: userNatt.userId,
+        userPhone: userNatt.userPhone,
+        userNattId,
+        nattTitle: userNatt.title,
+        amountFcfa: payoutAmount,
+        provider,
+        reference: payoutTransaction.gatewayReference,
+        transactionId: payoutTxId,
+      })
+      .catch(err => this.logger.error(`Failed to notify payout ${payoutTxId}: ${err.message}`));
 
     return {
       userNatt,
@@ -802,6 +830,7 @@ export class TontineTransactionService {
           name: natt.title,
           offerType: isClassique ? 'rotative' : 'projet',
           category: isClassique ? 'Rotative Mensuelle' : 'Rotative Journalière',
+          targetAmountFcfa: natt.targetAmount || (computedInstallmentAmount * totalTours),
           amountPerCycle: computedInstallmentAmount,
           currentTurn: natt.paidInstallmentsCount || 1,
           totalTours,

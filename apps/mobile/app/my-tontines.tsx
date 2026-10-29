@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TontineIcon, BellIcon, CalendarIcon } from '../components/Icons';
 import { useAuthStore } from '../store/useAuthStore';
-import { useNotificationStore } from '../store/useNotificationStore';
+import NotificationBell from '../components/NotificationBell';
 import { useDashboardSummary } from '../api/useTontine';
 import { ActiveTontineItem } from '../api/tontineApi';
 
@@ -26,7 +26,6 @@ export interface ExtendedTontineItem extends ActiveTontineItem {
 export default function MyTontinesScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-  const unreadNotifsCount = useNotificationStore((state) => state.unreadCount());
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -135,18 +134,7 @@ export default function MyTontinesScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          onPress={() => router.push('/notifications')}
-          activeOpacity={0.7}
-          className="w-10 h-10 items-center justify-center relative"
-        >
-          <BellIcon size={22} color="#173F73" />
-          {unreadNotifsCount > 0 && (
-            <View className="absolute top-1 right-1 bg-red-500 min-w-[16px] h-[16px] rounded-full items-center justify-center px-1">
-              <Text className="text-[9px] font-black text-white">{unreadNotifsCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <NotificationBell />
       </View>
 
       {/* Main Content */}
@@ -324,7 +312,7 @@ export default function MyTontinesScreen() {
                   Échéancier des Versements
                 </Text>
                 <Text className="text-xs text-gray-500 font-semibold mt-0.5">
-                  {selectedDetailsTontine?.name} ({selectedDetailsTontine?.category})
+                  {selectedDetailsTontine?.name} ({selectedDetailsTontine?.targetAmountFcfa?.toLocaleString('fr-FR')} FCFA)
                 </Text>
               </View>
               <TouchableOpacity
@@ -372,8 +360,8 @@ export default function MyTontinesScreen() {
                       <View
                         key={item.turnNumber}
                         className={`p-3.5 rounded-2xl border flex-row items-center justify-between ${item.isPaid
-                            ? 'bg-emerald-50/70 border-emerald-200'
-                            : 'bg-white border-gray-200'
+                          ? 'bg-emerald-50/70 border-emerald-200'
+                          : 'bg-white border-gray-200'
                           }`}
                       >
                         <View className="flex-row items-center space-x-3">
@@ -401,8 +389,8 @@ export default function MyTontinesScreen() {
                         {/* Status Tag */}
                         <View
                           className={`px-3 py-1 rounded-full ${item.isPaid
-                              ? 'bg-emerald-100 border border-emerald-300'
-                              : 'bg-amber-100 border border-amber-300'
+                            ? 'bg-emerald-100 border border-emerald-300'
+                            : 'bg-amber-100 border border-amber-300'
                             }`}
                         >
                           <Text

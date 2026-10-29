@@ -23,9 +23,11 @@ import {
   JoinIcon,
   BellIcon,
   FingerprintIcon,
+  ReceiptIcon,
 } from '../components/Icons';
+import { LegalModal } from '../components/LegalModal';
 import { useAuthStore } from '../store/useAuthStore';
-import { useNotificationStore } from '../store/useNotificationStore';
+import NotificationBell from '../components/NotificationBell';
 import { authApi } from '../api/authApi';
 import { kycApi } from '../api/kycApi';
 import { KycUploadModal } from '../components/KycUploadModal';
@@ -36,7 +38,6 @@ import { biometricsService } from '../services/biometricsService';
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isAuthenticated, updatePaymentMethod, updateProfileName, logout } = useAuthStore();
-  const unreadNotifsCount = useNotificationStore((state) => state.unreadCount());
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -56,6 +57,10 @@ export default function ProfileScreen() {
   // KYC Modal & Status State
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   const [kycStatusState, setKycStatusState] = useState<string>(user?.isVerified ? 'VERIFIED' : 'NOT_SUBMITTED');
+
+  // Legal Modal State (CGU & Confidentialité)
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<'terms' | 'privacy'>('terms');
 
   useEffect(() => {
     if (user?.uid) {
@@ -317,18 +322,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          onPress={() => router.push('/notifications')}
-          activeOpacity={0.7}
-          className="w-10 h-10 items-center justify-center relative"
-        >
-          <BellIcon size={22} color="#173F73" />
-          {unreadNotifsCount > 0 && (
-            <View className="absolute top-1 right-1 bg-red-500 min-w-[16px] h-[16px] rounded-full items-center justify-center px-1">
-              <Text className="text-[9px] font-black text-white">{unreadNotifsCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <NotificationBell />
       </View>
 
       {/* Main Content */}
@@ -504,6 +498,28 @@ export default function ProfileScreen() {
               />
             </View>
           )}
+
+          {/* 6. Mentions légales & Confidentialité (CDP Sénégal) */}
+          <TouchableOpacity
+            onPress={() => {
+              setLegalInitialTab('terms');
+              setIsLegalModalOpen(true);
+            }}
+            className="p-4 border-t border-gray-100 flex-row justify-between items-center"
+          >
+            <View className="flex-row items-center space-x-3">
+              <View className="w-9 h-9 rounded-xl bg-slate-100 items-center justify-center border border-slate-200">
+                <ReceiptIcon size={18} color="#173F73" />
+              </View>
+              <View className="flex-1 pr-2">
+                <Text className="text-sm font-extrabold text-brand-dark">
+                  Conditions & Confidentialité
+                </Text>
+                <Text className="text-xs text-gray-500">CGU et conformité CDP Sénégal</Text>
+              </View>
+            </View>
+            <Text className="text-base text-gray-400 font-bold">›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Logout Button */}
@@ -727,6 +743,13 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* MODAL 5: LEGAL & PRIVACY MODAL */}
+      <LegalModal
+        visible={isLegalModalOpen}
+        initialTab={legalInitialTab}
+        onClose={() => setIsLegalModalOpen(false)}
+      />
     </SafeAreaView>
   );
 }

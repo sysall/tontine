@@ -92,4 +92,9 @@ export class FirestoreService implements OnModuleInit {
   kyc() {
     return this.firestoreDb.collection('kyc_documents');
   }
+
+  /** In-app user notifications (overdue reminders, admin payouts) */
+  notifications() {
+    return this.firestoreDb.collection('notifications');
+  }
 }
